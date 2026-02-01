@@ -1,0 +1,115 @@
+import type { Event, Transaction } from '@/lib/types';
+
+export const transactions: Transaction[] = [
+  {
+    id: 'txn_1',
+    name: 'Olivia Martin',
+    email: 'olivia.martin@email.com',
+    amount: 150.0,
+    date: new Date('2023-11-23T10:30:00'),
+    status: 'Success',
+    type: 'Gift',
+  },
+  {
+    id: 'txn_2',
+    name: 'Jackson Lee',
+    email: 'jackson.lee@email.com',
+    amount: 75.5,
+    date: new Date('2023-11-23T11:05:00'),
+    status: 'Success',
+    type: 'Donation',
+  },
+  {
+    id: 'txn_3',
+    name: 'Isabella Nguyen',
+    email: 'isabella.nguyen@email.com',
+    amount: 200.0,
+    date: new Date('2023-11-23T12:15:00'),
+    status: 'Success',
+    type: 'Gift',
+  },
+  {
+    id: 'txn_4',
+    name: 'William Kim',
+    email: 'will@email.com',
+    amount: 100.0,
+    date: new Date('2023-11-23T14:00:00'),
+    status: 'Pending',
+    type: 'Service',
+  },
+  {
+    id: 'txn_5',
+    name: 'Sofia Davis',
+    email: 'sofia.davis@email.com',
+    amount: 300.0,
+    date: new Date('2023-11-23T15:45:00'),
+    status: 'Success',
+    type: 'Gift',
+  },
+  {
+    id: 'txn_6',
+    name: 'Liam Garcia',
+    email: 'liam.garcia@email.com',
+    amount: 50.0,
+    date: new Date('2023-11-24T09:00:00'),
+    status: 'Failed',
+    type: 'Donation',
+  },
+  {
+    id: 'txn_7',
+    name: 'Ava Martinez',
+    email: 'ava.martinez@email.com',
+    amount: 120.0,
+    date: new Date('2023-11-24T09:30:00'),
+    status: 'Success',
+    type: 'Gift',
+  },
+];
+
+export const events: Event[] = [
+  {
+    id: 'evt_1',
+    name: 'John & Jane\'s Wedding',
+    date: new Date('2023-11-23'),
+    location: 'The Grand Ballroom',
+    qrCodeValue: 'chanlopay_evt_1_john_jane_wedding',
+  },
+  {
+    id: 'evt_2',
+    name: 'Charity Gala 2023',
+    date: new Date('2023-12-15'),
+    location: 'City Convention Center',
+    qrCodeValue: 'chanlopay_evt_2_charity_gala',
+  },
+  {
+    id: 'evt_3',
+    name: 'Mike & Sarah\'s Anniversary',
+    date: new Date('2024-01-20'),
+    location: 'Oceanview Restaurant',
+    qrCodeValue: 'chanlopay_evt_3_mike_sarah_anniversary',
+  },
+];
+
+export const analyticsData = {
+  totalRevenue: 62550.75,
+  totalTransactions: 890,
+  revenueByGiftType: [
+    { name: 'Gift', value: 45000, fill: 'var(--color-chart-1)' },
+    { name: 'Donation', value: 12000, fill: 'var(--color-chart-2)' },
+    { name: 'Service', value: 5550.75, fill: 'var(--color-chart-3)' },
+  ],
+  monthlyRevenue: [
+    { month: 'Jan', revenue: 5200 },
+    { month: 'Feb', revenue: 4800 },
+    { month: 'Mar', revenue: 6300 },
+    { month: 'Apr', revenue: 5900 },
+    { month: 'May', revenue: 7100 },
+    { month: 'Jun', revenue: 7500 },
+    { month: 'Jul', revenue: 6800 },
+    { month: 'Aug', revenue: 7200 },
+    { month: 'Sep', revenue: 8100 },
+    { month: 'Oct', revenue: 8500 },
+    { month: 'Nov', revenue: 9200 },
+    { month: 'Dec', revenue: 10100 },
+  ],
+};
