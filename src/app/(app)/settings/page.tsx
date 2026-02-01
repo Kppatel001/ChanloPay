@@ -87,6 +87,14 @@ export default function SettingsPage() {
                     <Label htmlFor="address-proof">Proof of Address (Utility Bill)</Label>
                     <Input id="address-proof" type="file" />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-account">Bank Account Number</Label>
+                    <Input id="bank-account" placeholder="Enter your bank account number" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ifsc-code">IFSC Code</Label>
+                    <Input id="ifsc-code" placeholder="Enter your bank's IFSC code" />
+                  </div>
                 </form>
               </CardContent>
               <CardFooter>
