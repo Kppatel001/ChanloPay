@@ -46,6 +46,14 @@ export default function SettingsPage() {
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" defaultValue="host@chanlopay.com" />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mobile">Mobile Number</Label>
+                  <Input id="mobile" type="tel" defaultValue="+911234567890" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="upi">UPI ID</Label>
+                  <Input id="upi" defaultValue="verifiedhost@upi" />
+                </div>
               </CardContent>
               <CardFooter>
                 <Button>Save Changes</Button>
