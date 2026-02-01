@@ -58,33 +58,47 @@ export async function TransactionsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell className="font-medium">{transaction.id}</TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(transaction.status)}>
-                    {transaction.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{transaction.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {transaction.email}
-                  </div>
-                </TableCell>
-                <TableCell>{transaction.type}</TableCell>
-                <TableCell className="text-right">
-                  {formatCurrency(transaction.amount)}
+            {paginatedTransactions.length > 0 ? (
+              paginatedTransactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell className="font-medium">
+                    {transaction.id}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(transaction.status)}>
+                      {transaction.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{transaction.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {transaction.email}
+                    </div>
+                  </TableCell>
+                  <TableCell>{transaction.type}</TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(transaction.amount)}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  No transactions yet.
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
       <div className="flex items-center justify-between pt-4">
         <div className="text-sm text-muted-foreground">
-          Showing {start + 1} to {Math.min(end, transactions.length)} of{' '}
-          {transactions.length} transactions.
+          Showing {transactions.length > 0 ? start + 1 : 0} to{' '}
+          {Math.min(end, transactions.length)} of {transactions.length}{' '}
+          transactions.
         </div>
         <div className="flex gap-2">
           <Button

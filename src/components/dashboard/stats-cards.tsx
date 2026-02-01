@@ -25,9 +25,11 @@ export function StatsCards() {
           <div className="text-2xl font-bold">
             {formatCurrency(analyticsData.totalRevenue)}
           </div>
-          <p className="text-xs text-muted-foreground">
-            +20.1% from last month
-          </p>
+          {analyticsData.totalRevenue > 0 && (
+            <p className="text-xs text-muted-foreground">
+              +20.1% from last month
+            </p>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -39,9 +41,11 @@ export function StatsCards() {
           <div className="text-2xl font-bold">
             +{analyticsData.totalTransactions}
           </div>
-          <p className="text-xs text-muted-foreground">
-            +180.1% from last month
-          </p>
+          {analyticsData.totalTransactions > 0 && (
+            <p className="text-xs text-muted-foreground">
+              +180.1% from last month
+            </p>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -50,8 +54,7 @@ export function StatsCards() {
           <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">+12</div>
-          <p className="text-xs text-muted-foreground">+19% from last month</p>
+          <div className="text-2xl font-bold">+0</div>
         </CardContent>
       </Card>
       <Card>
@@ -60,8 +63,7 @@ export function StatsCards() {
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">+573</div>
-          <p className="text-xs text-muted-foreground">+201 since last hour</p>
+          <div className="text-2xl font-bold">+0</div>
         </CardContent>
       </Card>
     </div>
