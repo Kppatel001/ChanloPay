@@ -54,6 +54,23 @@ export default function SettingsPage() {
                   <Label htmlFor="upi">UPI ID</Label>
                   <Input id="upi" defaultValue="verifiedhost@upi" />
                 </div>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="upi-qr">Upload UPI QR Code</Label>
+                  <Input id="upi-qr" type="file" />
+                  <p className="text-sm text-muted-foreground">
+                    Upload an image of your UPI QR code to receive payments.
+                  </p>
+                </div>
               </CardContent>
               <CardFooter>
                 <Button>Save Changes</Button>
