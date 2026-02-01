@@ -1,16 +1,187 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict, user-centric ownership model.
+ * All data is organized hierarchically under a host's unique ID, ensuring that
+ * hosts can only access their own information and the data related to their events.
+ * This path-based security model is highly performant as it avoids extra
+ * database reads (`get()` calls) for authorization checks.
+ *
+ * Data Structure: The database follows a nested structure:
+ *   /hosts/{hostId}
+ *     /events/{eventId}
+ *       /transactions/{transactionId}
+ *         /fraudulentTransactions/{fraudulentTransactionId}
+ *
+ * Each level of this hierarchy inherits access control from the root `hostId`.
+ *
+ * Key Security Decisions:
+ * - Host profiles are private: A user can only access their own document in the
+ *   `/hosts` collection. Listing all hosts is strictly forbidden to protect user privacy.
+ * - Path-based Ownership: All subcollections (events, transactions, etc.) are secured
+ *   using the `{hostId}` from the path, ensuring that only the owner can access
+ *   or modify their own data tree.
+ * - Prototyping Flexibility: These rules enforce strict authorization (who can access what)
+ *   but do not validate the specific shape or data types of documents, allowing for
+ *   rapid development and schema changes. Validation is limited to fields critical for
+ *   maintaining relational integrity (e.g., ensuring an event's `hostId` matches the path).
+ *
+ * Denormalization for Authorization: This ruleset is designed around a path-based
+ * system that does not require denormalization for authorization, as the ownership
+ * (`hostId`) is present in every path, making lookups unnecessary.
+ *
+ * Structural Segregation: The nested collection structure naturally segregates data,
+ * preventing unauthorized data access during list operations and simplifying security logic.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
 
+    // Helper Functions
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user is the owner of a document,
+     * based on the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the user is the owner AND the document already exists.
+     * This is critical for all update and delete operations to prevent modifying
+     * non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates that the 'id' field of a new Host document matches the document's ID.
+     */
+    function hasValidHostData(hostId) {
+      return request.resource.data.id == hostId;
+    }
+    
+    /**
+     * Enforces that the 'id' field of a Host document is immutable on update.
+     */
+    function isHostDataImmutable() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates that the 'hostId' field of a new Event document matches the hostId from the path.
+     */
+    function hasValidEventData(hostId) {
+      return request.resource.data.hostId == hostId;
+    }
+    
+    /**
+     * Enforces that the 'hostId' field of an Event document is immutable on update.
+     */
+    function isEventDataImmutable() {
+      return request.resource.data.hostId == resource.data.hostId;
+    }
+
+    /**
+     * Validates that the 'eventId' field of a new Transaction document matches the eventId from the path.
+     */
+    function hasValidTransactionData(eventId) {
+      return request.resource.data.eventId == eventId;
+    }
+
+    /**
+     * Enforces that the 'eventId' field of a Transaction document is immutable on update.
+     */
+    function isTransactionDataImmutable() {
+      return request.resource.data.eventId == resource.data.eventId;
+    }
+
+    /**
+     * Validates that the 'transactionId' field of a new FraudulentTransaction document matches the transactionId from the path.
+     */
+    function hasValidFraudulentTransactionData(transactionId) {
+      return request.resource.data.transactionId == transactionId;
+    }
+
+    /**
+     * Enforces that the 'transactionId' field of a FraudulentTransaction document is immutable on update.
+     */
+    function isFraudulentTransactionDataImmutable() {
+      return request.resource.data.transactionId == resource.data.transactionId;
+    }
+
+    /**
+     * @description Controls access to individual Host profiles.
+     * @path /hosts/{hostId}
+     * @allow (get) An authenticated host (auth.uid == hostId) can read their own profile.
+     * @allow (create) A new host can create their own profile document if their auth.uid matches the document ID.
+     * @deny (list) No user, authenticated or not, can list all documents in the `/hosts` collection.
+     * @deny (update) An authenticated user trying to update another user's profile is denied.
+     * @principle Restricts access to a user's own data tree and prevents enumeration of all users.
+     */
+    match /hosts/{hostId} {
+      allow get: if isOwner(hostId);
+      allow list: if false;
+      allow create: if isOwner(hostId) && hasValidHostData(hostId);
+      allow update: if isExistingOwner(hostId) && isHostDataImmutable();
+      allow delete: if isExistingOwner(hostId);
+
+      /**
+       * @description Controls access to the Events subcollection for a specific host.
+       * @path /hosts/{hostId}/events/{eventId}
+       * @allow (create) The host (auth.uid == hostId) can create a new event.
+       * @allow (list) The host (auth.uid == hostId) can list all of their own events.
+       * @deny (get) A user trying to read an event belonging to a different host is denied.
+       * @deny (update) A user trying to update an event belonging to a different host is denied.
+       * @principle Enforces strict path-based ownership for all nested data.
+       */
       match /events/{eventId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+        allow get: if isOwner(hostId);
+        allow list: if isOwner(hostId);
+        allow create: if isOwner(hostId) && hasValidEventData(hostId);
+        allow update: if isExistingOwner(hostId) && isEventDataImmutable();
+        allow delete: if isExistingOwner(hostId);
 
-      match /transactions/{transactionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        /**
+         * @description Controls access to the Transactions subcollection for a specific event.
+         * @path /hosts/{hostId}/events/{eventId}/transactions/{transactionId}
+         * @allow (create) The host (auth.uid == hostId) can create a new transaction for their event.
+         * @allow (list) The host (auth.uid == hostId) can list all transactions for their event.
+         * @deny (get) A user trying to read a transaction belonging to a different host's event is denied.
+         * @deny (delete) A user trying to delete a transaction from another host's event is denied.
+         * @principle Enforces strict path-based ownership for all nested data.
+         */
+        match /transactions/{transactionId} {
+          allow get: if isOwner(hostId);
+          allow list: if isOwner(hostId);
+          allow create: if isOwner(hostId) && hasValidTransactionData(eventId);
+          allow update: if isExistingOwner(hostId) && isTransactionDataImmutable();
+          allow delete: if isExistingOwner(hostId);
+
+          /**
+           * @description Controls access to fraudulent transaction reports.
+           * @path /hosts/{hostId}/events/{eventId}/transactions/{transactionId}/fraudulentTransactions/{fraudulentTransactionId}
+           * @allow (create) The host (auth.uid == hostId) can create a new fraud report for their transaction.
+           * @allow (list) The host (auth.uid == hostId) can list all fraud reports for their transaction.
+           * @deny (get) A user trying to read a fraud report belonging to a different host is denied.
+           * @deny (update) A user trying to update a fraud report belonging to a different host is denied.
+           * @principle Enforces strict path-based ownership for all nested data.
+           */
+          match /fraudulentTransactions/{fraudulentTransactionId} {
+            allow get: if isOwner(hostId);
+            allow list: if isOwner(hostId);
+            allow create: if isOwner(hostId) && hasValidFraudulentTransactionData(transactionId);
+            allow update: if isExistingOwner(hostId) && isFraudulentTransactionDataImmutable();
+            allow delete: if isExistingOwner(hostId);
+          }
+        }
       }
     }
   }

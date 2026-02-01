@@ -1,98 +1,247 @@
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "description": "Represents a user's profile information.",
+    "Host": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Host",
       "type": "object",
+      "description": "Represents a verified host in the ChanloPay system.",
       "properties": {
-        "email": {
+        "id": {
           "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "name": {
-          "type": "string",
-          "description": "The user's full name."
-        }
-      },
-      "required": ["email"]
-    },
-    "Event": {
-      "title": "Event",
-      "description": "Represents an event created by a user.",
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the event."
-        },
-        "location": {
-          "type": "string",
-          "description": "The location of the event."
-        },
-        "date": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date and time of the event."
-        },
-        "qrCodeValue": {
-            "type": "string",
-            "description": "The value encoded in the QR code for payments."
-        },
-        "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "The timestamp when the event was created."
-        }
-      },
-      "required": ["name", "location", "date", "qrCodeValue", "createdAt"]
-    },
-    "Transaction": {
-      "title": "Transaction",
-      "description": "Represents a payment transaction for an event.",
-      "type": "object",
-      "properties": {
-        "amount": {
-          "type": "number"
-        },
-        "status": {
-          "type": "string",
-          "enum": ["Success", "Pending", "Failed"]
-        },
-        "type": {
-          "type": "string",
-          "enum": ["Gift", "Donation", "Service"]
-        },
-        "name": {
-          "type": "string"
+          "description": "Unique identifier for the Host entity."
         },
         "email": {
           "type": "string",
+          "description": "Email address of the host.",
           "format": "email"
         },
-        "date": {
-            "type": "string",
-            "format": "date-time"
+        "kycVerified": {
+          "type": "boolean",
+          "description": "Indicates whether the host has been KYC verified."
+        },
+        "registrationDate": {
+          "type": "string",
+          "description": "Date and time when the host registered.",
+          "format": "date-time"
         }
       },
-      "required": ["amount", "status", "type", "name", "email", "date"]
+      "required": [
+        "id",
+        "email",
+        "kycVerified",
+        "registrationDate"
+      ]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event for which payments are tracked.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Event entity."
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Reference to Host. (Relationship: Host 1:N Event)"
+        },
+        "eventName": {
+          "type": "string",
+          "description": "Name of the event."
+        },
+        "eventDate": {
+          "type": "string",
+          "description": "Date and time of the event.",
+          "format": "date-time"
+        },
+        "qrCode": {
+          "type": "string",
+          "description": "QR code associated with the event."
+        }
+      },
+      "required": [
+        "id",
+        "hostId",
+        "eventName",
+        "eventDate",
+        "qrCode"
+      ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a transaction made during an event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Transaction entity."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to Event. (Relationship: Event 1:N Transaction)"
+        },
+        "transactionDate": {
+          "type": "string",
+          "description": "Date and time of the transaction.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the transaction."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment method used for the transaction."
+        },
+        "receiptQrCode": {
+          "type": "string",
+          "description": "The QR code associated with a particular transaction for shareable receipts."
+        }
+      },
+      "required": [
+        "id",
+        "eventId",
+        "transactionDate",
+        "amount",
+        "paymentMethod",
+        "receiptQrCode"
+      ]
+    },
+    "FraudulentTransaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FraudulentTransaction",
+      "type": "object",
+      "description": "Represents a transaction flagged as potentially fraudulent by the AI tool.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FraudulentTransaction entity."
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "Reference to Transaction. (Relationship: Transaction 1:1 FraudulentTransaction)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason why the transaction was flagged as fraudulent."
+        },
+        "confidenceScore": {
+          "type": "number",
+          "description": "Confidence score of the AI's fraud detection."
+        },
+        "reviewStatus": {
+          "type": "string",
+          "description": "The current review status of the transaction"
+        }
+      },
+      "required": [
+        "id",
+        "transactionId",
+        "reason",
+        "confidenceScore",
+        "reviewStatus"
+      ]
     }
   },
   "auth": {
-    "providers": ["password"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": { "$ref": "#/entities/UserProfile" },
-      "description": "Stores user profile information."
-    },
-    "/users/{userId}/events/{eventId}": {
-      "schema": { "$ref": "#/entities/Event" },
-      "description": "Stores events created by a specific user."
-    },
-    "/users/{userId}/transactions/{transactionId}": {
-      "schema": { "$ref": "#/entities/Transaction" },
-      "description": "Stores transactions for a specific user."
-    }
+    "structure": [
+      {
+        "path": "/hosts/{hostId}",
+        "definition": {
+          "entityName": "Host",
+          "schema": {
+            "$ref": "#/backend/entities/Host"
+          },
+          "description": "Stores host profiles. Only the host (matching {hostId}) can read/write their document.",
+          "params": [
+            {
+              "name": "hostId",
+              "description": "The unique identifier of the host, matching the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hosts/{hostId}/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/backend/entities/Event"
+          },
+          "description": "Stores events created by a host.  Path-based ownership is enforced, meaning only the host (matching {hostId}) can read/write events under this path.",
+          "params": [
+            {
+              "name": "hostId",
+              "description": "The unique identifier of the host."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier of the event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hosts/{hostId}/events/{eventId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores transactions for an event. Path-based ownership ensures only the host (matching {hostId}) can read/write transactions under this path.",
+          "params": [
+            {
+              "name": "hostId",
+              "description": "The unique identifier of the host."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier of the event."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique identifier of the transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hosts/{hostId}/events/{eventId}/transactions/{transactionId}/fraudulentTransactions/{fraudulentTransactionId}",
+        "definition": {
+          "entityName": "FraudulentTransaction",
+          "schema": {
+            "$ref": "#/backend/entities/FraudulentTransaction"
+          },
+          "description": "Stores fraudulent transaction reports for a given transaction. Path-based ownership is enforced, meaning only the host (matching {hostId}) can read/write fraudulent transactions under this path.",
+          "params": [
+            {
+              "name": "hostId",
+              "description": "The unique identifier of the host."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier of the event."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique identifier of the transaction."
+            },
+            {
+              "name": "fraudulentTransactionId",
+              "description": "The unique identifier of the fraudulent transaction."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support ChanloPay's core features, including verified host login, KYC verification, event creation, payment tracking, receipt generation and fraud detection. It prioritizes authorization independence and secure list operations. Hosts are stored in a top-level collection. Events are stored within a host-owned subcollection, and transactions are stored as subcollections of events. Fraudulent Transactions are stored as a subcollection of a Transaction.\n\n**Authorization Independence:**\nAuthorization is achieved by path-based ownership and requires no `get()` calls in security rules. Specifically:\n*   `/hosts/{hostId}`: Only the authenticated user with matching `uid` can read/write their profile.\n*   `/hosts/{hostId}/events/{eventId}`: Events are owned by the host. The `hostId` in the path enforces this ownership. No denormalization needed, so path based rules are sufficient.\n*   `/hosts/{hostId}/events/{eventId}/transactions/{transactionId}`: Transactions are owned by the event.  The path enforces this ownership.\n*    `/hosts/{hostId}/events/{eventId}/transactions/{transactionId}/fraudulentTransactions/{fraudulentTransactionId}`: Fraudulent Transactions are owned by the transaction.  The path enforces this ownership.\n\n\n**QAPs (Rules are not Filters):**\nThe structure ensures secure list operations by:\n*   Structural Segregation: Different data types (hosts, events, transactions) are stored in separate collections or subcollections, preventing the need to filter based on authorization within a single collection.\n*   Path-Based Ownership: Listing events or transactions is restricted by the path, ensuring that a user can only list events/transactions associated with their host ID."
   }
 }
