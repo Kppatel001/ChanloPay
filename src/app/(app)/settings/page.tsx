@@ -80,14 +80,6 @@ export default function SettingsPage() {
                 </div>
                 <form className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="id-doc">Identity Document (Passport, ID Card)</Label>
-                    <Input id="id-doc" type="file" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address-proof">Proof of Address (Utility Bill)</Label>
-                    <Input id="address-proof" type="file" />
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="bank-account">Bank Account Number</Label>
                     <Input id="bank-account" placeholder="Enter your bank account number" />
                   </div>
