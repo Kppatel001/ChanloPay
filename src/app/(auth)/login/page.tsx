@@ -4,6 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +28,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Logo } from '@/components/icons';
+import { useToast } from '@/hooks/use-toast';
+import { FirebaseClientProvider, useAuth } from '@/firebase';
+import { useState } from 'react';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -33,7 +41,12 @@ const formSchema = z.object({
   }),
 });
 
-export default function LoginPage() {
+function LoginPageContent() {
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -42,10 +55,42 @@ export default function LoginPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Mock login logic
-    console.log(values);
-    // In a real app, you would redirect to the dashboard upon successful login
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      toast({
+        title: 'Signed in!',
+        description: "You've successfully signed in.",
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      // If user not found, try to create a new user
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        try {
+          await createUserWithEmailAndPassword(auth, values.email, values.password);
+          toast({
+            title: 'Account created!',
+            description: "We've created a new account for you and signed you in.",
+          });
+          router.push('/dashboard');
+        } catch (creationError: any) {
+           toast({
+            variant: 'destructive',
+            title: 'Uh oh! Something went wrong.',
+            description: creationError.message,
+          });
+        }
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Uh oh! Something went wrong.',
+          description: error.message,
+        });
+      }
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -58,7 +103,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>Host Login</CardTitle>
           <CardDescription>
-            Enter your credentials to access your dashboard.
+            Enter your credentials to access your dashboard. If you don't have an account, one will be created for you.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -94,15 +139,22 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Link href="/dashboard">
-                <Button type="submit" className="w-full">
-                  Sign In
-                </Button>
-              </Link>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Signing In...' : 'Sign In'}
+              </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+
+export default function LoginPage() {
+  return (
+    <FirebaseClientProvider>
+      <LoginPageContent />
+    </FirebaseClientProvider>
   );
 }

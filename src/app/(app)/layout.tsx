@@ -1,3 +1,5 @@
+'use client';
+
 import {
   SidebarProvider,
   Sidebar,
@@ -10,9 +12,28 @@ import { Logo } from '@/components/icons';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { FirebaseClientProvider, useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayoutContent({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useUser();
+  const router = useRouter();
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-generic');
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -36,14 +57,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             <Avatar className="size-8">
               {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" data-ai-hint={userAvatar.imageHint} />}
-              <AvatarFallback>U</AvatarFallback>
+              <AvatarFallback>{user.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-sidebar-foreground">
                 Verified Host
               </span>
               <span className="text-xs text-sidebar-foreground/70">
-                host@chanlopay.com
+                {user.email}
               </span>
             </div>
           </div>
@@ -51,5 +72,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
+  );
+}
+
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <FirebaseClientProvider>
+      <AppLayoutContent>{children}</AppLayoutContent>
+    </FirebaseClientProvider>
   );
 }

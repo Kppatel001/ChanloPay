@@ -20,33 +20,64 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { events as mockEvents } from '@/lib/mock-data';
 import type { Event } from '@/lib/types';
-import { Calendar, MapPin, QrCode } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(mockEvents);
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const eventsQuery = user ? query(collection(firestore, `users/${user.uid}/events`), orderBy('createdAt', 'desc')) : null;
+  const { data: events, loading: eventsLoading } = useCollection<Event>(eventsQuery?.path ?? '', eventsQuery ?? undefined);
+
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [newEventName, setNewEventName] = useState('');
   const [newEventLocation, setNewEventLocation] = useState('');
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
-  const handleCreateEvent = () => {
-    if (!newEventName || !newEventLocation) return;
+  const handleCreateEvent = async () => {
+    if (!newEventName || !newEventLocation || !user) return;
+
+    setIsCreatingEvent(true);
 
     const newEvent: Event = {
-      id: `evt_${Date.now()}`,
       name: newEventName,
       date: new Date(),
       location: newEventLocation,
       qrCodeValue: `chanlopay_evt_${Date.now()}_${newEventName.toLowerCase().replace(/\s/g, '_')}`,
+      createdAt: serverTimestamp(),
     };
-
-    setEvents((prevEvents) => [newEvent, ...prevEvents]);
-    setNewEventName('');
-    setNewEventLocation('');
-    setCreateDialogOpen(false);
+    
+    if (firestore) {
+      const collectionRef = collection(firestore, `users/${user.uid}/events`);
+      addDoc(collectionRef, newEvent).then(() => {
+        toast({
+          title: "Event Created!",
+          description: `${newEvent.name} has been created successfully.`,
+        });
+        setNewEventName('');
+        setNewEventLocation('');
+        setCreateDialogOpen(false);
+      }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: collectionRef.path,
+          operation: 'create',
+          requestResourceData: newEvent,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }).finally(() => {
+        setIsCreatingEvent(false);
+      });
+    }
   };
 
   return (
@@ -94,16 +125,30 @@ export default function EventsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" onClick={handleCreateEvent}>
+                <Button type="submit" onClick={handleCreateEvent} disabled={isCreatingEvent}>
+                  {isCreatingEvent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Event
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
+        
+        {eventsLoading && <div className="text-center">Loading events...</div>}
+
+        {!eventsLoading && (!events || events.length === 0) && (
+          <div className="text-center text-muted-foreground py-8">
+            <p>No events created yet.</p>
+            <p>Click "Create New Event" to get started.</p>
+          </div>
+        )}
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => {
+          {events && events.map((event) => {
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${event.qrCodeValue}`;
+            // Firestore timestamp needs to be converted to JS Date
+            const eventDate = (event.date as any).toDate ? (event.date as any).toDate() : new Date(event.date);
+
             return (
               <Card key={event.id}>
                 <CardHeader>
@@ -111,7 +156,7 @@ export default function EventsPage() {
                   <div>
                     <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>{event.date.toLocaleDateString()}</span>
+                      <span>{eventDate.toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />

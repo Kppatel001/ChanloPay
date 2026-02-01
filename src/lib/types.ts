@@ -1,3 +1,5 @@
+import { FieldValue } from 'firebase/firestore';
+
 export type Transaction = {
   id: string;
   name: string;
@@ -9,9 +11,10 @@ export type Transaction = {
 };
 
 export type Event = {
-  id: string;
+  id?: string;
   name:string;
   date: Date;
   location: string;
   qrCodeValue: string;
+  createdAt?: FieldValue;
 };
