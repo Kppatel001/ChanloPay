@@ -55,9 +55,18 @@
           "description": "Date and time of the event.",
           "format": "date-time"
         },
+        "location": {
+          "type": "string",
+          "description": "Location of the event."
+        },
         "qrCode": {
           "type": "string",
           "description": "QR code associated with the event."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the event was created.",
+          "format": "date-time"
         }
       },
       "required": [
@@ -65,7 +74,8 @@
         "hostId",
         "eventName",
         "eventDate",
-        "qrCode"
+        "qrCode",
+        "location"
       ]
     },
     "Transaction": {

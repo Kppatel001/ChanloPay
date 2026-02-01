@@ -12,9 +12,10 @@ export type Transaction = {
 
 export type Event = {
   id?: string;
-  name:string;
-  date: Date;
+  hostId: string;
+  eventName: string;
+  eventDate: string; // ISO string
   location: string;
-  qrCodeValue: string;
+  qrCode: string;
   createdAt?: FieldValue;
 };

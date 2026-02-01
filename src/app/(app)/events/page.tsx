@@ -38,7 +38,7 @@ export default function EventsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const eventsQuery = user ? query(collection(firestore, `users/${user.uid}/events`), orderBy('createdAt', 'desc')) : null;
+  const eventsQuery = user ? query(collection(firestore, `hosts/${user.uid}/events`), orderBy('createdAt', 'desc')) : null;
   const { data: events, loading: eventsLoading } = useCollection<Event>(eventsQuery?.path ?? '', eventsQuery ?? undefined);
 
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -47,39 +47,38 @@ export default function EventsPage() {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   const handleCreateEvent = async () => {
-    if (!newEventName || !newEventLocation || !user) return;
+    if (!newEventName || !newEventLocation || !user || !firestore) return;
 
     setIsCreatingEvent(true);
 
-    const newEvent: Event = {
-      name: newEventName,
-      date: new Date(),
+    const newEvent: Omit<Event, 'id'> = {
+      hostId: user.uid,
+      eventName: newEventName,
+      eventDate: new Date().toISOString(),
       location: newEventLocation,
-      qrCodeValue: `chanlopay_evt_${Date.now()}_${newEventName.toLowerCase().replace(/\s/g, '_')}`,
+      qrCode: `chanlopay_evt_${Date.now()}_${newEventName.toLowerCase().replace(/\s/g, '_')}`,
       createdAt: serverTimestamp(),
     };
     
-    if (firestore) {
-      const collectionRef = collection(firestore, `users/${user.uid}/events`);
-      addDoc(collectionRef, newEvent).then(() => {
-        toast({
-          title: "Event Created!",
-          description: `${newEvent.name} has been created successfully.`,
-        });
-        setNewEventName('');
-        setNewEventLocation('');
-        setCreateDialogOpen(false);
-      }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: collectionRef.path,
-          operation: 'create',
-          requestResourceData: newEvent,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      }).finally(() => {
-        setIsCreatingEvent(false);
+    const collectionRef = collection(firestore, `hosts/${user.uid}/events`);
+    addDoc(collectionRef, newEvent).then(() => {
+      toast({
+        title: "Event Created!",
+        description: `${newEvent.eventName} has been created successfully.`,
       });
-    }
+      setNewEventName('');
+      setNewEventLocation('');
+      setCreateDialogOpen(false);
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: collectionRef.path,
+        operation: 'create',
+        requestResourceData: newEvent,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    }).finally(() => {
+      setIsCreatingEvent(false);
+    });
   };
 
   return (
@@ -153,14 +152,13 @@ export default function EventsPage() {
 
             <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {events && events.map((event) => {
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${event.qrCodeValue}`;
-                // Firestore timestamp needs to be converted to JS Date
-                const eventDate = (event.date as any).toDate ? (event.date as any).toDate() : new Date(event.date);
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${event.qrCode}`;
+                const eventDate = new Date(event.eventDate);
 
                 return (
                   <Card key={event.id}>
                     <CardHeader>
-                      <CardTitle>{event.name}</CardTitle>
+                      <CardTitle>{event.eventName}</CardTitle>
                       <div>
                         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-4 w-4" />
@@ -190,13 +188,13 @@ export default function EventsPage() {
                             <DialogTitle>Scan to Pay</DialogTitle>
                             <DialogDescription>
                               Guests can scan this code with their phone to send a
-                              gift for {event.name}.
+                              gift for {event.eventName}.
                             </DialogDescription>
                           </DialogHeader>
                           <div className="flex items-center justify-center p-4">
                             <Image
                               src={qrCodeUrl}
-                              alt={`QR Code for ${event.name}`}
+                              alt={`QR Code for ${event.eventName}`}
                               width={250}
                               height={250}
                               className="rounded-lg"
