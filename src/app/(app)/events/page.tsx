@@ -3,7 +3,6 @@ import { Header } from '@/components/layout/header';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -38,7 +37,7 @@ export default function EventsPage() {
               <Card key={event.id}>
                 <CardHeader>
                   <CardTitle>{event.name}</CardTitle>
-                  <CardDescription>
+                  <div>
                     <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>{event.date.toLocaleDateString()}</span>
@@ -47,7 +46,7 @@ export default function EventsPage() {
                       <MapPin className="h-4 w-4" />
                       <span>{event.location}</span>
                     </div>
-                  </CardDescription>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
