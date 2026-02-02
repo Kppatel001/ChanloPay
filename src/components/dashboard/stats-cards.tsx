@@ -5,14 +5,43 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { WalletCards, Users, ArrowUpRight, Activity } from 'lucide-react';
-import { analyticsData } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export function StatsCards() {
+interface StatsCardsProps {
+  totalRevenue: number;
+  totalTransactions: number;
+  eventsCount: number;
+  isLoading: boolean;
+}
+
+export function StatsCards({
+  totalRevenue,
+  totalTransactions,
+  eventsCount,
+  isLoading,
+}: StatsCardsProps) {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-5 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-3/4" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -23,13 +52,8 @@ export function StatsCards() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {formatCurrency(analyticsData.totalRevenue)}
+            {formatCurrency(totalRevenue)}
           </div>
-          {analyticsData.totalRevenue > 0 && (
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
-            </p>
-          )}
         </CardContent>
       </Card>
       <Card>
@@ -39,13 +63,8 @@ export function StatsCards() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            +{analyticsData.totalTransactions}
+            +{totalTransactions}
           </div>
-          {analyticsData.totalTransactions > 0 && (
-            <p className="text-xs text-muted-foreground">
-              +180.1% from last month
-            </p>
-          )}
         </CardContent>
       </Card>
       <Card>
@@ -54,7 +73,7 @@ export function StatsCards() {
           <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">+0</div>
+          <div className="text-2xl font-bold">+{eventsCount}</div>
         </CardContent>
       </Card>
       <Card>

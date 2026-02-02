@@ -6,10 +6,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { transactions } from '@/lib/mock-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import type { Transaction } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export function RecentTransactions() {
+interface RecentTransactionsProps {
+  transactions: Transaction[];
+  isLoading: boolean;
+}
+
+export function RecentTransactions({
+  transactions,
+  isLoading,
+}: RecentTransactionsProps) {
   const recentTransactions = transactions.slice(0, 5);
 
   const formatCurrency = (amount: number) =>
@@ -18,12 +27,37 @@ export function RecentTransactions() {
       currency: 'USD',
     }).format(amount);
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Transactions</CardTitle>
+          <CardDescription>
+            <Skeleton className="h-4 w-48" />
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="ml-4 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <Skeleton className="ml-auto h-5 w-16" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Recent Transactions</CardTitle>
         <CardDescription>
-          You have {transactions.length} transactions this month.
+          You have {transactions.length} transactions.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -61,7 +95,7 @@ export function RecentTransactions() {
             );
           })
         ) : (
-          <div className="text-center text-muted-foreground">
+          <div className="flex h-48 items-center justify-center text-center text-muted-foreground">
             No recent transactions.
           </div>
         )}
