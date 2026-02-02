@@ -92,7 +92,7 @@ export default function EventsPage() {
     };
     
     const collectionRef = collection(firestore, `hosts/${user.uid}/events`);
-    addDoc(collectionRef, newEvent).then(() => {
+    addDoc(collectionRef, newEvent).then((docRef) => {
       toast({
         title: "Event Created!",
         description: `${newEvent.eventName} has been created successfully.`,
@@ -100,6 +100,57 @@ export default function EventsPage() {
       setNewEventName('');
       setNewEventLocation('');
       setCreateDialogOpen(false);
+
+      // Add dummy transactions
+      const eventId = docRef.id;
+      const transactionsColRef = collection(firestore, `hosts/${user.uid}/events/${eventId}/transactions`);
+      const dummyTransactions = [
+        {
+          name: 'Olivia Martin',
+          email: 'olivia.martin@email.com',
+          amount: Math.floor(Math.random() * 200) + 50,
+          transactionDate: new Date().toISOString(),
+          status: 'Success',
+          type: 'Gift',
+          paymentMethod: 'UPI',
+          receiptQrCode: `chanlopay_txn_${Date.now()}_1`,
+          eventId: eventId,
+        },
+        {
+          name: 'Liam Brown',
+          email: 'liam.brown@email.com',
+          amount: Math.floor(Math.random() * 100) + 20,
+          transactionDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          status: 'Success',
+          type: 'Gift',
+          paymentMethod: 'Card',
+          receiptQrCode: `chanlopay_txn_${Date.now()}_2`,
+          eventId: eventId,
+        },
+        {
+          name: 'Ava Jones',
+          email: 'ava.jones@email.com',
+          amount: Math.floor(Math.random() * 50) + 10,
+          transactionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'Failed',
+          type: 'Gift',
+          paymentMethod: 'UPI',
+          receiptQrCode: `chanlopay_txn_${Date.now()}_3`,
+          eventId: eventId,
+        }
+      ];
+
+      dummyTransactions.forEach(tx => {
+        addDoc(transactionsColRef, tx).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: transactionsColRef.path,
+                operation: 'create',
+                requestResourceData: tx,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+      });
+
     }).catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
         path: collectionRef.path,

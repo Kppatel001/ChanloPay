@@ -115,6 +115,32 @@
         "receiptQrCode": {
           "type": "string",
           "description": "The QR code associated with a particular transaction for shareable receipts."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the person who made the transaction."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email of the person who made the transaction."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the transaction.",
+          "enum": [
+            "Success",
+            "Pending",
+            "Failed"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the transaction.",
+          "enum": [
+            "Gift",
+            "Donation",
+            "Service"
+          ]
         }
       },
       "required": [
