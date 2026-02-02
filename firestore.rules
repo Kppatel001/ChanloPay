@@ -72,7 +72,7 @@ service cloud.firestore {
      * Enforces that the 'id' field of a Host document is immutable on update.
      */
     function isHostDataImmutable() {
-      return request.resource.data.id == resource.data.id;
+      return !request.resource.data.diff(resource.data).affectedKeys().has('id');
     }
 
     /**
@@ -86,7 +86,7 @@ service cloud.firestore {
      * Enforces that the 'hostId' field of an Event document is immutable on update.
      */
     function isEventDataImmutable() {
-      return request.resource.data.hostId == resource.data.hostId;
+      return !request.resource.data.diff(resource.data).affectedKeys().has('hostId');
     }
 
     /**
@@ -100,7 +100,7 @@ service cloud.firestore {
      * Enforces that the 'eventId' field of a Transaction document is immutable on update.
      */
     function isTransactionDataImmutable() {
-      return request.resource.data.eventId == resource.data.eventId;
+      return !request.resource.data.diff(resource.data).affectedKeys().has('eventId');
     }
 
     /**
@@ -114,7 +114,7 @@ service cloud.firestore {
      * Enforces that the 'transactionId' field of a FraudulentTransaction document is immutable on update.
      */
     function isFraudulentTransactionDataImmutable() {
-      return request.resource.data.transactionId == resource.data.transactionId;
+      return !request.resource.data.diff(resource.data).affectedKeys().has('transactionId');
     }
 
     /**
