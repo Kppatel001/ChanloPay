@@ -9,11 +9,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Settings, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth, useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
@@ -29,7 +28,6 @@ export function Header({ pageTitle }: HeaderProps) {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-generic');
   
   const handleLogout = async () => {
     try {
@@ -63,7 +61,6 @@ export function Header({ pageTitle }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
-                {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" data-ai-hint={userAvatar.imageHint} />}
                 <AvatarFallback>{user?.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
               </Avatar>
             </Button>

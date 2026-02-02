@@ -10,8 +10,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/icons';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -19,7 +18,6 @@ import { useEffect } from 'react';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-generic');
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -56,7 +54,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <div className="flex items-center gap-3">
             <Avatar className="size-8">
-              {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" data-ai-hint={userAvatar.imageHint} />}
               <AvatarFallback>{user.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
