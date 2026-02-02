@@ -20,13 +20,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import type { Event } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -79,6 +90,25 @@ export default function EventsPage() {
       errorEmitter.emit('permission-error', permissionError);
     }).finally(() => {
       setIsCreatingEvent(false);
+    });
+  };
+
+  const handleDeleteEvent = (eventId: string) => {
+    if (!user || !firestore || !eventId) return;
+
+    const eventRef = doc(firestore, `hosts/${user.uid}/events`, eventId);
+
+    deleteDoc(eventRef).then(() => {
+      toast({
+        title: "Event Deleted",
+        description: "The event has been successfully deleted.",
+      });
+    }).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: eventRef.path,
+        operation: 'delete',
+      });
+      errorEmitter.emit('permission-error', permissionError);
     });
   };
 
@@ -172,12 +202,12 @@ export default function EventsPage() {
                         Click below to view the QR code for guests to make payments.
                       </p>
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="grid grid-cols-2 gap-4">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button className="w-full">
+                          <Button className="w-full" variant="outline">
                             <QrCode className="mr-2 h-4 w-4" />
-                            View QR Code
+                            View QR
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
@@ -203,6 +233,26 @@ export default function EventsPage() {
                           </div>
                         </DialogContent>
                       </Dialog>
+                       <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="w-full">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete this event and all of its associated data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteEvent(event.id!)}>Continue</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </CardFooter>
                   </Card>
                 );
