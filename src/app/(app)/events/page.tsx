@@ -30,8 +30,6 @@ import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/fi
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { EventIdeaGenerator } from '@/components/events/event-idea-generator';
-import { Separator } from '@/components/ui/separator';
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -86,10 +84,6 @@ export default function EventsPage() {
       <Header pageTitle="Events" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="grid gap-8">
-          <EventIdeaGenerator />
-          
-          <Separator />
-
           <div>
             <div className="flex items-center justify-between">
               <h2 className="font-headline text-2xl font-semibold">Your Events</h2>
