@@ -82,7 +82,6 @@ export default function LoginPage() {
             await setDoc(hostDocRef, {
               id: newUser.uid,
               email: newUser.email,
-              kycVerified: true, // For demo, auto-verify KYC
               registrationDate: new Date().toISOString(),
               name: '',
               mobile: '',

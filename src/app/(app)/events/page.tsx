@@ -65,13 +65,12 @@ export default function EventsPage() {
   
   const handleOpenCreateEventDialog = () => {
     const isProfileComplete = hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi;
-    const isKycVerified = hostProfile && hostProfile.kycVerified;
 
-    if (!isProfileComplete || !isKycVerified) {
+    if (!isProfileComplete) {
         toast({
             variant: 'destructive',
             title: 'Profile Incomplete',
-            description: 'Please complete your profile and KYC verification in Settings before creating an event.',
+            description: 'Please complete your profile in Settings before creating an event.',
         });
         return;
     }

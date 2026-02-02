@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Host",
       "type": "object",
-      "description": "Represents a verified host in the ChanloPay system.",
+      "description": "Represents a host in the ChanloPay system.",
       "properties": {
         "id": {
           "type": "string",
@@ -15,9 +15,17 @@
           "description": "Email address of the host.",
           "format": "email"
         },
-        "kycVerified": {
-          "type": "boolean",
-          "description": "Indicates whether the host has been KYC verified."
+        "name": {
+          "type": "string",
+          "description": "Full name of the host."
+        },
+        "mobile": {
+          "type": "string",
+          "description": "Mobile number of the host."
+        },
+        "upi": {
+          "type": "string",
+          "description": "UPI ID of the host."
         },
         "registrationDate": {
           "type": "string",
@@ -28,7 +36,6 @@
       "required": [
         "id",
         "email",
-        "kycVerified",
         "registrationDate"
       ]
     },
@@ -252,6 +259,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support ChanloPay's core features, including verified host login, KYC verification, event creation, payment tracking, receipt generation and fraud detection. It prioritizes authorization independence and secure list operations. Hosts are stored in a top-level collection. Events are stored within a host-owned subcollection, and transactions are stored as subcollections of events. Fraudulent Transactions are stored as a subcollection of a Transaction.\n\n**Authorization Independence:**\nAuthorization is achieved by path-based ownership and requires no `get()` calls in security rules. Specifically:\n*   `/hosts/{hostId}`: Only the authenticated user with matching `uid` can read/write their profile.\n*   `/hosts/{hostId}/events/{eventId}`: Events are owned by the host. The `hostId` in the path enforces this ownership. No denormalization needed, so path based rules are sufficient.\n*   `/hosts/{hostId}/events/{eventId}/transactions/{transactionId}`: Transactions are owned by the event.  The path enforces this ownership.\n*    `/hosts/{hostId}/events/{eventId}/transactions/{transactionId}/fraudulentTransactions/{fraudulentTransactionId}`: Fraudulent Transactions are owned by the transaction.  The path enforces this ownership.\n\n\n**QAPs (Rules are not Filters):**\nThe structure ensures secure list operations by:\n*   Structural Segregation: Different data types (hosts, events, transactions) are stored in separate collections or subcollections, preventing the need to filter based on authorization within a single collection.\n*   Path-Based Ownership: Listing events or transactions is restricted by the path, ensuring that a user can only list events/transactions associated with their host ID."
+    "reasoning": "The Firestore data structure is designed to support ChanloPay's core features, including verified host login, event creation, payment tracking, receipt generation and fraud detection. It prioritizes authorization independence and secure list operations. Hosts are stored in a top-level collection. Events are stored within a host-owned subcollection, and transactions are stored as subcollections of events. Fraudulent Transactions are stored as a subcollection of a Transaction.\n\n**Authorization Independence:**\nAuthorization is achieved by path-based ownership and requires no `get()` calls in security rules. Specifically:\n*   `/hosts/{hostId}`: Only the authenticated user with matching `uid` can read/write their profile.\n*   `/hosts/{hostId}/events/{eventId}`: Events are owned by the host. The `hostId` in the path enforces this ownership. No denormalization needed, so path based rules are sufficient.\n*   `/hosts/{hostId}/events/{eventId}/transactions/{transactionId}`: Transactions are owned by the event.  The path enforces this ownership.\n*    `/hosts/{hostId}/events/{eventId}/transactions/{transactionId}/fraudulentTransactions/{fraudulentTransactionId}`: Fraudulent Transactions are owned by the transaction.  The path enforces this ownership.\n\n\n**QAPs (Rules are not Filters):**\nThe structure ensures secure list operations by:\n*   Structural Segregation: Different data types (hosts, events, transactions) are stored in separate collections or subcollections, preventing the need to filter based on authorization within a single collection.\n*   Path-Based Ownership: Listing events or transactions is restricted by the path, ensuring that a user can only list events/transactions associated with their host ID."
   }
 }

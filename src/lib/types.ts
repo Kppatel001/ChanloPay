@@ -24,7 +24,6 @@ export type Event = {
 export type Host = {
   id: string;
   email: string;
-  kycVerified: boolean;
   name?: string;
   mobile?: string;
   upi?: string;
