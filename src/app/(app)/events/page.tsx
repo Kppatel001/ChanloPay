@@ -40,7 +40,7 @@ export default function EventsPage() {
     if (!user || !firestore) return null;
     return query(collection(firestore, `hosts/${user.uid}/events`), orderBy('createdAt', 'desc'));
   }, [user, firestore]);
-  const { data: events, loading: eventsLoading } = useCollection<Event>(eventsQuery);
+  const { data: events, isLoading: eventsLoading } = useCollection<Event>(eventsQuery);
 
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [newEventName, setNewEventName] = useState('');
@@ -149,7 +149,7 @@ export default function EventsPage() {
 
             <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {events && events.map((event) => {
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${event.qrCode}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(event.qrCode)}`;
                 const eventDate = new Date(event.eventDate);
 
                 return (
