@@ -1,3 +1,6 @@
+'use client';
+
+import { useUser } from '@/firebase';
 import { Header } from '@/components/layout/header';
 import {
   Tabs,
@@ -17,9 +20,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { user } = useUser();
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header pageTitle="Settings" />
@@ -40,19 +45,24 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" defaultValue="Verified Host" />
+                  <Input id="name" placeholder="Your full name" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="host@chanlopay.com" />
+                  <Input
+                    id="email"
+                    type="email"
+                    readOnly
+                    value={user?.email ?? ''}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="mobile">Mobile Number</Label>
-                  <Input id="mobile" type="tel" defaultValue="+911234567890" />
+                  <Input id="mobile" type="tel" placeholder="Your mobile number" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="upi">UPI ID</Label>
-                  <Input id="upi" defaultValue="verifiedhost@upi" />
+                  <Input id="upi" placeholder="your-upi-id@okhdfcbank" />
                 </div>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -98,16 +108,22 @@ export default function SettingsPage() {
                 <form className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="bank-account">Bank Account Number</Label>
-                    <Input id="bank-account" placeholder="Enter your bank account number" />
+                    <Input
+                      id="bank-account"
+                      placeholder="Enter your bank account number"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="ifsc-code">IFSC Code</Label>
-                    <Input id="ifsc-code" placeholder="Enter your bank's IFSC code" />
+                    <Input
+                      id="ifsc-code"
+                      placeholder="Enter your bank's IFSC code"
+                    />
                   </div>
                 </form>
               </CardContent>
               <CardFooter>
-                 <Button disabled>Submit for Verification</Button>
+                <Button disabled>Submit for Verification</Button>
               </CardFooter>
             </Card>
           </TabsContent>
