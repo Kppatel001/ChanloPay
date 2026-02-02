@@ -17,17 +17,17 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-generic');
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isUserLoading && !user) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, isUserLoading, router]);
 
-  if (loading || !user) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center">
         <p>Loading...</p>
@@ -60,11 +60,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <AvatarFallback>{user.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-sidebar-foreground">
-                Verified Host
+              <span className="text-sm font-medium text-sidebar-foreground truncate">
+                {user.email}
               </span>
               <span className="text-xs text-sidebar-foreground/70">
-                {user.email}
+                Verified Host
               </span>
             </div>
           </div>
