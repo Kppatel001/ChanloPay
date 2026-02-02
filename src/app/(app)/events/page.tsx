@@ -25,7 +25,7 @@ import { Calendar, MapPin, QrCode, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -36,8 +36,11 @@ export default function EventsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const eventsQuery = user ? query(collection(firestore, `hosts/${user.uid}/events`), orderBy('createdAt', 'desc')) : null;
-  const { data: events, loading: eventsLoading } = useCollection<Event>(eventsQuery?.path ?? '', eventsQuery ?? undefined);
+  const eventsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, `hosts/${user.uid}/events`), orderBy('createdAt', 'desc'));
+  }, [user, firestore]);
+  const { data: events, loading: eventsLoading } = useCollection<Event>(eventsQuery);
 
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [newEventName, setNewEventName] = useState('');
