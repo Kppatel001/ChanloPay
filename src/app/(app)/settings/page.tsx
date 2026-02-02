@@ -52,7 +52,7 @@ export default function SettingsPage() {
                   <Input
                     id="email"
                     type="email"
-                    readOnly
+                    disabled
                     value={user?.email ?? ''}
                   />
                 </div>
