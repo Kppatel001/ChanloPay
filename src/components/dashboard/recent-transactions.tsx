@@ -32,9 +32,9 @@ export function RecentTransactions({
       <Card>
         <CardHeader>
           <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>
+          <div className="text-sm text-muted-foreground">
             <Skeleton className="h-4 w-48" />
-          </CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {[...Array(3)].map((_, i) => (
