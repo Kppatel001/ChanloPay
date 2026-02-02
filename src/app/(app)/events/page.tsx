@@ -18,7 +18,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -31,12 +30,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { Event } from '@/lib/types';
+import type { Event, Host } from '@/lib/types';
 import { Calendar, MapPin, QrCode, Loader2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -46,6 +45,12 @@ export default function EventsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const hostRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, `hosts/${user.uid}`);
+  }, [user, firestore]);
+  const { data: hostProfile } = useDoc<Host>(hostRef);
 
   const eventsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -57,6 +62,21 @@ export default function EventsPage() {
   const [newEventName, setNewEventName] = useState('');
   const [newEventLocation, setNewEventLocation] = useState('');
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  
+  const handleOpenCreateEventDialog = () => {
+    const isProfileComplete = hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi;
+    const isKycVerified = hostProfile && hostProfile.kycVerified;
+
+    if (!isProfileComplete || !isKycVerified) {
+        toast({
+            variant: 'destructive',
+            title: 'Profile Incomplete',
+            description: 'Please complete your profile and KYC verification in Settings before creating an event.',
+        });
+        return;
+    }
+    setCreateDialogOpen(true);
+  };
 
   const handleCreateEvent = async () => {
     if (!newEventName || !newEventLocation || !user || !firestore) return;
@@ -120,10 +140,10 @@ export default function EventsPage() {
           <div>
             <div className="flex items-center justify-between">
               <h2 className="font-headline text-2xl font-semibold">Your Events</h2>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>Create New Event</Button>
-                </DialogTrigger>
+              <Button onClick={handleOpenCreateEventDialog}>Create New Event</Button>
+            </div>
+            
+            <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>Create New Event</DialogTitle>
@@ -165,9 +185,8 @@ export default function EventsPage() {
                     </Button>
                   </DialogFooter>
                 </DialogContent>
-              </Dialog>
-            </div>
-            
+            </Dialog>
+
             {eventsLoading && <div className="mt-4 text-center">Loading events...</div>}
 
             {!eventsLoading && (!events || events.length === 0) && (

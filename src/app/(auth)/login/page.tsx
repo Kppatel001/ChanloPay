@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ import {
 } from '@/components/ui/card';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -42,7 +43,8 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const auth = useAuth();
-  const { user, loading } = useUser();
+  const firestore = useFirestore();
+  const { user, isUserLoading: loading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +74,22 @@ export default function LoginPage() {
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
-          await createUserWithEmailAndPassword(auth, values.email, values.password);
+          const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+          const newUser = userCredential.user;
+          
+          if (newUser && firestore) {
+            const hostDocRef = doc(firestore, 'hosts', newUser.uid);
+            await setDoc(hostDocRef, {
+              id: newUser.uid,
+              email: newUser.email,
+              kycVerified: true, // For demo, auto-verify KYC
+              registrationDate: new Date().toISOString(),
+              name: '',
+              mobile: '',
+              upi: ''
+            });
+          }
+
           toast({
             title: 'Account created!',
             description: "We've created a new account for you and signed you in.",
