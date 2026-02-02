@@ -12,11 +12,11 @@ import { Logo } from '@/components/icons';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { FirebaseClientProvider, useUser } from '@/firebase';
+import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-function AppLayoutContent({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
   const router = useRouter();
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-generic');
@@ -72,14 +72,5 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
-  );
-}
-
-
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <FirebaseClientProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
-    </FirebaseClientProvider>
   );
 }

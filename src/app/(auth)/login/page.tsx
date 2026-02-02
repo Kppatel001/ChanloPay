@@ -3,12 +3,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,8 +29,7 @@ import {
 } from '@/components/ui/card';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
-import { FirebaseClientProvider, useAuth } from '@/firebase';
-import { useState } from 'react';
+import { useAuth, useUser } from '@/firebase';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -41,11 +40,18 @@ const formSchema = z.object({
   }),
 });
 
-function LoginPageContent() {
+export default function LoginPage() {
   const auth = useAuth();
+  const { user, loading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,9 +69,7 @@ function LoginPageContent() {
         title: 'Signed in!',
         description: "You've successfully signed in.",
       });
-      router.push('/dashboard');
     } catch (error: any) {
-      // If user not found, try to create a new user
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
           await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -73,7 +77,6 @@ function LoginPageContent() {
             title: 'Account created!',
             description: "We've created a new account for you and signed you in.",
           });
-          router.push('/dashboard');
         } catch (creationError: any) {
            toast({
             variant: 'destructive',
@@ -91,6 +94,14 @@ function LoginPageContent() {
     } finally {
         setIsSubmitting(false);
     }
+  }
+
+  if (loading || user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   return (
@@ -147,14 +158,5 @@ function LoginPageContent() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-
-export default function LoginPage() {
-  return (
-    <FirebaseClientProvider>
-      <LoginPageContent />
-    </FirebaseClientProvider>
   );
 }
