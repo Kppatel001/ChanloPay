@@ -50,7 +50,7 @@ export default function SettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const hostRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return doc(firestore, `hosts/${user.uid}`);
   }, [user, firestore]);
   const { data: hostProfile } = useDoc<Host>(hostRef);
@@ -79,6 +79,7 @@ export default function SettingsPage() {
     setIsSubmitting(true);
     const hostDocRef = doc(firestore, `hosts/${user.uid}`);
 
+    // Update the profile in the database
     setDoc(hostDocRef, values, { merge: true })
       .then(() => {
         toast({
@@ -97,7 +98,7 @@ export default function SettingsPage() {
           variant: 'destructive',
           title: 'Uh oh! Something went wrong.',
           description: 'Could not save your profile. Please try again.',
-        })
+        });
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -137,8 +138,10 @@ export default function SettingsPage() {
                     id="email"
                     type="email"
                     disabled
+                    className="bg-muted cursor-not-allowed"
                     value={user?.email ?? ''}
                   />
+                  <p className="text-xs text-muted-foreground">Your email address is managed automatically.</p>
                 </div>
                 <FormField
                   control={form.control}
