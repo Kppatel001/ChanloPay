@@ -80,10 +80,10 @@ export default function SettingsPage() {
     setIsSubmitting(true);
     const hostDocRef = doc(firestore, `hosts/${user.uid}`);
 
+    // We merge the changes to avoid overwriting uneditable fields like email or registrationDate
     setDoc(hostDocRef, {
       ...values,
       id: user.uid,
-      email: user.email,
     }, { merge: true })
       .then(() => {
         toast({

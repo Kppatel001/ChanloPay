@@ -18,6 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -135,7 +136,7 @@ export default function EventsPage() {
 
       dummyTransactions.forEach(tx => {
         addDoc(transactionsColRef, tx).catch(async () => {
-            // Error handling handled by global emitter if needed
+            // Error handling handled by global emitter
         });
       });
 
