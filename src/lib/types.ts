@@ -9,6 +9,7 @@ export type Transaction = {
   status: 'Success' | 'Pending' | 'Failed';
   type: 'Gift' | 'Donation' | 'Service';
   eventName?: string;
+  eventId?: string;
 };
 
 export type Event = {

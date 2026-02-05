@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import type { Event, Transaction } from '@/lib/types';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -23,15 +23,29 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileDown, Loader2, User } from 'lucide-react';
+import { FileDown, Loader2, User, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // Augment jsPDF with autoTable
 interface jsPDFWithAutoTable extends jsPDF {
@@ -42,6 +56,7 @@ export function TransactionsTable() {
   const { user } = useUser();
   const firestore = useFirestore();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,67 +64,88 @@ export function TransactionsTable() {
   const page = Number(searchParams.get('page')) || 1;
   const perPage = 10;
 
-  useEffect(() => {
-    if (!firestore || !user) {
-      if (!user) setIsLoading(false);
+  const fetchAllTransactions = async () => {
+    if (!firestore || !user) return;
+    
+    setIsLoading(true);
+    const eventsQuery = query(
+      collection(firestore, `hosts/${user.uid}/events`)
+    );
+    const eventsSnapshot = await getDocs(eventsQuery);
+    const events = eventsSnapshot.docs.map((doc) => ({
+      ...doc.data(),
+      id: doc.id,
+    })) as Event[];
+
+    if (events.length === 0) {
+      setTransactions([]);
+      setIsLoading(false);
       return;
     }
 
-    const fetchAllTransactions = async () => {
-      setIsLoading(true);
-      const eventsQuery = query(
-        collection(firestore, `hosts/${user.uid}/events`)
-      );
-      const eventsSnapshot = await getDocs(eventsQuery);
-      const events = eventsSnapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-      })) as Event[];
-
-      if (events.length === 0) {
-        setTransactions([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const allTransactions: Transaction[] = [];
-      await Promise.all(
-        events.map(async (event) => {
-          if (event.id) {
-            const transactionsQuery = query(
-              collection(
-                firestore,
-                `hosts/${user.uid}/events/${event.id}/transactions`
-              )
-            );
-            const querySnapshot = await getDocs(transactionsQuery);
-            querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              allTransactions.push({
-                id: doc.id,
-                amount: data.amount || 0,
-                name: data.name || 'Guest',
-                email: data.email || 'N/A',
-                status: data.status || 'Success',
-                type: data.type || 'Gift',
-                date: data.transactionDate
-                  ? new Date(data.transactionDate)
-                  : new Date(),
-                eventName: event.eventName,
-              });
+    const allTransactions: Transaction[] = [];
+    await Promise.all(
+      events.map(async (event) => {
+        if (event.id) {
+          const transactionsQuery = query(
+            collection(
+              firestore,
+              `hosts/${user.uid}/events/${event.id}/transactions`
+            )
+          );
+          const querySnapshot = await getDocs(transactionsQuery);
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            allTransactions.push({
+              id: doc.id,
+              amount: data.amount || 0,
+              name: data.name || 'Guest',
+              email: data.email || 'N/A',
+              status: data.status || 'Success',
+              type: data.type || 'Gift',
+              date: data.transactionDate
+                ? new Date(data.transactionDate)
+                : new Date(),
+              eventName: event.eventName,
+              eventId: event.id,
             });
-          }
-        })
-      );
+          });
+        }
+      })
+    );
 
-      setTransactions(
-        allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime())
-      );
-      setIsLoading(false);
-    };
+    setTransactions(
+      allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime())
+    );
+    setIsLoading(false);
+  };
 
+  useEffect(() => {
     fetchAllTransactions();
   }, [firestore, user]);
+
+  const handleDeleteTransaction = async (transactionId: string, eventId?: string) => {
+    if (!user || !firestore || !eventId) return;
+
+    const txnRef = doc(firestore, `hosts/${user.uid}/events/${eventId}/transactions`, transactionId);
+
+    deleteDoc(txnRef)
+      .then(() => {
+        toast({
+          title: "Payment Deleted",
+          description: "The payment record has been removed.",
+        });
+        // Optimistically update local state
+        setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      })
+      .catch(async () => {
+        const permissionError = new FirestorePermissionError({
+          path: txnRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
+  };
 
   const start = (page - 1) * perPage;
   const end = start + perPage;
@@ -184,22 +220,27 @@ export function TransactionsTable() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Guest Payment History</CardTitle>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <FileDown className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleExportPDF}>
-              Export as PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportExcel}>
-              Export as Excel
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => fetchAllTransactions()}>
+             Refresh
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF}>
+                Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel}>
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -210,6 +251,7 @@ export function TransactionsTable() {
                 <TableHead>Guest Full Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -233,12 +275,38 @@ export function TransactionsTable() {
                     <TableCell className="text-right font-semibold">
                       {formatCurrency(transaction.amount)}
                     </TableCell>
+                    <TableCell>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Payment Record?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this payment record from {transaction.name}? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteTransaction(transaction.id, transaction.eventId)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No guest payments recorded yet.
