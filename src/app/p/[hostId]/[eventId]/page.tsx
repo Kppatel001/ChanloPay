@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home } from 'lucide-react';
+import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -101,7 +101,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     );
   }
 
-  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&tn=${encodeURIComponent(eventData.eventName)}`;
+  // Constructing UPI Deep Link URI
+  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&am=${amount}&tn=${encodeURIComponent(eventData.eventName)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiUri)}`;
 
   return (
@@ -202,7 +203,14 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 UPI ID: {hostProfile.upi}
               </p>
               
-              <div className="mt-8 w-full">
+              <div className="mt-8 w-full space-y-3">
+                <Button asChild className="w-full font-body font-bold h-12 text-lg">
+                  <a href={upiUri}>
+                    <ExternalLink className="mr-2 h-5 w-5" />
+                    Pay via UPI App
+                  </a>
+                </Button>
+
                 <Button 
                   variant="outline" 
                   className="w-full font-body"
