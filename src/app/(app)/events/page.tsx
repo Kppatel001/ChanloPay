@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -33,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, Wallet, User as UserIcon, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, Wallet, User as UserIcon, Link as LinkIcon, ExternalLink, Home } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -72,6 +71,7 @@ export default function EventsPage() {
 
   // Recording transaction state
   const [guestName, setGuestName] = useState('');
+  const [villageName, setVillageName] = useState('');
   const [guestAmount, setGuestAmount] = useState('');
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   
@@ -94,14 +94,12 @@ export default function EventsPage() {
 
     setIsCreatingEvent(true);
 
-    // The QR code now points to our guest-facing payment page
-    // We store a placeholder that we'll resolve on the client side
     const newEvent: Omit<Event, 'id'> = {
       hostId: user.uid,
       eventName: newEventName,
       eventDate: new Date().toISOString(),
       location: newEventLocation,
-      qrCode: 'GUEST_PAYMENT_URL', // Placeholder
+      qrCode: 'GUEST_PAYMENT_URL',
       createdAt: serverTimestamp(),
     };
     
@@ -141,6 +139,7 @@ export default function EventsPage() {
     const amount = parseFloat(guestAmount);
     const transactionData = {
       name: guestName,
+      village: villageName,
       email: 'N/A',
       amount: amount,
       transactionDate: new Date().toISOString(),
@@ -160,6 +159,7 @@ export default function EventsPage() {
           description: `Successfully recorded ₹${amount} from ${guestName}.`,
         });
         setGuestName('');
+        setVillageName('');
         setGuestAmount('');
       })
       .catch(async () => {
@@ -345,6 +345,19 @@ export default function EventsPage() {
                                     className="pl-9"
                                     value={guestName}
                                     onChange={(e) => setGuestName(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid gap-1">
+                                <Label htmlFor="village-name" className="text-xs">Village Name</Label>
+                                <div className="relative">
+                                  <Home className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input 
+                                    id="village-name" 
+                                    placeholder="Enter village" 
+                                    className="pl-9"
+                                    value={villageName}
+                                    onChange={(e) => setVillageName(e.target.value)}
                                   />
                                 </div>
                               </div>

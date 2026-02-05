@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileDown, Loader2, User, Trash2 } from 'lucide-react';
+import { FileDown, Loader2, User, Trash2, Home } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,6 +100,7 @@ export function TransactionsTable() {
               id: doc.id,
               amount: data.amount || 0,
               name: data.name || 'Guest',
+              village: data.village || 'N/A',
               email: data.email || 'N/A',
               status: data.status || 'Success',
               type: data.type || 'Gift',
@@ -174,10 +175,11 @@ export function TransactionsTable() {
   const handleExportPDF = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     doc.autoTable({
-      head: [['Event', 'Guest Name', 'Amount', 'Date', 'Status']],
+      head: [['Event', 'Guest Name', 'Village', 'Amount', 'Date', 'Status']],
       body: transactions.map((t) => [
         t.eventName,
         t.name,
+        t.village || 'N/A',
         formatCurrency(t.amount),
         t.date.toLocaleDateString(),
         t.status,
@@ -191,6 +193,7 @@ export function TransactionsTable() {
       transactions.map((t) => ({
         Event: t.eventName,
         'Guest Name': t.name,
+        Village: t.village || 'N/A',
         Amount: t.amount,
         Date: t.date,
         Status: t.status,
@@ -249,6 +252,7 @@ export function TransactionsTable() {
               <TableRow>
                 <TableHead>Event</TableHead>
                 <TableHead>Guest Full Name</TableHead>
+                <TableHead>Village</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -265,6 +269,12 @@ export function TransactionsTable() {
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{transaction.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Home className="h-4 w-4 text-muted-foreground" />
+                        <span>{transaction.village}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -306,7 +316,7 @@ export function TransactionsTable() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No guest payments recorded yet.

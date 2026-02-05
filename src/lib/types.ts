@@ -4,6 +4,7 @@ export type Transaction = {
   id: string;
   name: string;
   email: string;
+  village?: string;
   amount: number;
   date: Date;
   status: 'Success' | 'Pending' | 'Failed';

@@ -120,6 +120,10 @@
           "type": "string",
           "description": "Name of the person who made the transaction."
         },
+        "village": {
+          "type": "string",
+          "description": "Village of the person who made the transaction."
+        },
         "email": {
           "type": "string",
           "description": "Email of the person who made the transaction."

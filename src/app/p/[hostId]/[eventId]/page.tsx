@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, use, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft } from 'lucide-react';
+import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -20,6 +19,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const { toast } = useToast();
 
   const [guestName, setGuestName] = useState('');
+  const [villageName, setVillageName] = useState('');
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -52,6 +52,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       const transactionsColRef = collection(firestore, `hosts/${resolvedParams.hostId}/events/${resolvedParams.eventId}/transactions`);
       await addDoc(transactionsColRef, {
         name: guestName,
+        village: villageName,
         email: 'Guest',
         amount: parseFloat(amount),
         transactionDate: new Date().toISOString(),
@@ -132,6 +133,19 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
                       required
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="villageName" className="font-body">Village Name</Label>
+                  <div className="relative">
+                    <Home className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="villageName"
+                      placeholder="Enter your village"
+                      className="pl-10 font-body"
+                      value={villageName}
+                      onChange={(e) => setVillageName(e.target.value)}
                     />
                   </div>
                 </div>
