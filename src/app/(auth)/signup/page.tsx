@@ -4,7 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
@@ -28,7 +29,7 @@ import {
 } from '@/components/ui/card';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -37,10 +38,15 @@ const formSchema = z.object({
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
   }),
+  confirmPassword: z.string().min(6),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
-export default function LoginPage() {
+export default function SignupPage() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading: loading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
@@ -57,24 +63,38 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
+      confirmPassword: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const newUser = userCredential.user;
+      
+      if (newUser && firestore) {
+        const hostDocRef = doc(firestore, 'hosts', newUser.uid);
+        await setDoc(hostDocRef, {
+          id: newUser.uid,
+          email: newUser.email,
+          registrationDate: new Date().toISOString(),
+          name: '',
+          mobile: '',
+          upi: ''
+        });
+      }
+
       toast({
-        title: 'Signed in!',
-        description: "Welcome back to ChanloPay.",
+        title: 'Account created!',
+        description: "Welcome to ChanloPay. Please complete your profile in Settings.",
       });
+      router.push('/settings');
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Sign in failed',
-        description: error.message === 'Firebase: Error (auth/invalid-credential).' 
-          ? 'Invalid email or password.' 
-          : error.message,
+        title: 'Sign up failed',
+        description: error.message,
       });
     } finally {
       setIsSubmitting(false);
@@ -97,14 +117,14 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Host Login</CardTitle>
+          <CardTitle>Create Host Account</CardTitle>
           <CardDescription>
-            Enter your credentials to access your host dashboard.
+            Join ChanloPay to start managing digital payments for your events.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -135,17 +155,30 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input placeholder="••••••••" type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Signing In...' : 'Sign In'}
+                {isSubmitting ? 'Creating Account...' : 'Sign Up'}
               </Button>
             </form>
           </Form>
         </CardContent>
         <CardFooter className="flex justify-center border-t py-4">
           <p className="text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-primary font-semibold hover:underline">
-              Sign Up
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary font-semibold hover:underline">
+              Sign In
             </Link>
           </p>
         </CardFooter>
