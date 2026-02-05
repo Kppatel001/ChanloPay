@@ -12,6 +12,8 @@ import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalL
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
   const resolvedParams = use(params);
@@ -48,43 +50,47 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
     setIsSubmitting(true);
 
-    try {
-      const transactionsColRef = collection(firestore, `hosts/${resolvedParams.hostId}/events/${resolvedParams.eventId}/transactions`);
-      await addDoc(transactionsColRef, {
-        name: guestName,
-        village: villageName,
-        email: 'Guest',
-        amount: parseFloat(amount),
-        transactionDate: new Date().toISOString(),
-        status: 'Success',
-        type: 'Gift',
-        paymentMethod: 'UPI',
-        receiptQrCode: `guest_txn_${Date.now()}`,
-        eventId: resolvedParams.eventId,
-      });
+    const transactionData = {
+      name: guestName,
+      village: villageName,
+      email: 'Guest',
+      amount: parseFloat(amount),
+      transactionDate: new Date().toISOString(),
+      status: 'Success',
+      type: 'Gift',
+      paymentMethod: 'UPI',
+      receiptQrCode: `guest_txn_${Date.now()}`,
+      eventId: resolvedParams.eventId,
+    };
 
-      setHasSubmitted(true);
-      toast({
-        title: 'Information Received',
-        description: 'Thank you! You can now complete your payment.',
+    const transactionsColRef = collection(firestore, `hosts/${resolvedParams.hostId}/events/${resolvedParams.eventId}/transactions`);
+    
+    addDoc(transactionsColRef, transactionData)
+      .then(() => {
+        setHasSubmitted(true);
+        toast({
+          title: 'Details Recorded',
+          description: 'Thank you! You can now complete your payment.',
+        });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: transactionsColRef.path,
+          operation: 'create',
+          requestResourceData: transactionData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-    } catch (error) {
-      console.error('Error recording transaction:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   if (hostLoading || eventLoading) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2 text-sm text-muted-foreground font-body">Loading secure payment portal...</p>
+        <p className="mt-2 text-sm text-muted-foreground font-body">Opening secure portal...</p>
       </div>
     );
   }
@@ -96,12 +102,11 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <Logo className="h-12 w-12" />
         </div>
         <h1 className="text-xl font-headline font-bold mb-2">Event Not Found</h1>
-        <p className="text-muted-foreground font-body">This payment link might be invalid or the event has ended.</p>
+        <p className="text-muted-foreground font-body">This link might be invalid or the event has ended.</p>
       </div>
     );
   }
 
-  // Constructing UPI Deep Link URI
   const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&am=${amount}&tn=${encodeURIComponent(eventData.eventName)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiUri)}`;
 
@@ -124,12 +129,12 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="guestName" className="font-body">Your Full Name</Label>
+                  <Label htmlFor="guestName" className="font-body">Full Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="guestName"
-                      placeholder="Enter your name"
+                      placeholder="Enter your full name"
                       className="pl-10 font-body"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
@@ -151,7 +156,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="amount" className="font-body">Amount to Send</Label>
+                  <Label htmlFor="amount" className="font-body">Amount to Pay</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">₹</span>
                     <Input
@@ -165,9 +170,10 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     />
                   </div>
                 </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full font-body font-bold" disabled={isSubmitting}>
+              </form>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={handleSubmit} className="w-full font-body font-bold" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
@@ -175,8 +181,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   )}
                   Continue to Pay
                 </Button>
-              </CardFooter>
-            </form>
+            </CardFooter>
           </Card>
         ) : (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
@@ -186,7 +191,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               </div>
               <CardTitle className="font-headline text-xl">Details Recorded</CardTitle>
               <CardDescription className="font-body">
-                Scan the QR code below using any UPI app to complete your gift of <span className="font-bold text-foreground">₹{amount}</span>.
+                Scan with any UPI app to complete your payment of <span className="font-bold text-foreground">₹{amount}</span>.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
@@ -223,7 +228,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             </CardContent>
             <CardFooter className="bg-muted/30 pt-6">
                 <p className="text-[10px] text-center w-full text-muted-foreground font-body">
-                    Payments are handled securely via standard UPI protocols.
+                    Payments are secure via standard UPI protocols.
                 </p>
             </CardFooter>
           </Card>

@@ -139,9 +139,8 @@ export function TransactionsTable() {
       .then(() => {
         toast({
           title: "Payment Deleted",
-          description: "The payment record has been removed.",
+          description: "The record has been removed.",
         });
-        // Optimistically update local state
         setTransactions(prev => prev.filter(t => t.id !== transactionId));
       })
       .catch(async () => {
@@ -285,9 +284,9 @@ export function TransactionsTable() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Payment Record?</AlertDialogTitle>
+                            <AlertDialogTitle>Delete Record?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete this payment record from {transaction.name}? This action cannot be undone.
+                              Are you sure you want to delete the payment record for {transaction.name}? This cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -310,7 +309,7 @@ export function TransactionsTable() {
                     colSpan={6}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    No guest payments recorded yet.
+                    No payments found.
                   </TableCell>
                 </TableRow>
               )}
@@ -320,8 +319,7 @@ export function TransactionsTable() {
         <div className="flex items-center justify-between pt-4">
           <div className="text-sm text-muted-foreground">
             Showing {transactions.length > 0 ? start + 1 : 0} to{' '}
-            {Math.min(end, transactions.length)} of {transactions.length}{' '}
-            recorded payments.
+            {Math.min(end, transactions.length)} of {transactions.length} recorded payments.
           </div>
           <div className="flex gap-2">
             <Button
