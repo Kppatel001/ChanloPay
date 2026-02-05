@@ -32,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -244,11 +244,13 @@ export default function EventsPage() {
                 padding: 40px;
                 border-radius: 20px;
                 background: white;
+                max-width: 500px;
               }
-              img { width: 400px; height: 400px; margin-bottom: 20px; }
+              img { width: 400px; height: 400px; margin: 20px 0; }
               h1 { margin: 0; color: #6d28d9; font-size: 32px; }
-              p { font-size: 18px; color: #4b5563; margin-top: 10px; }
+              p { font-size: 18px; color: #4b5563; margin: 10px 0; }
               .logo { font-weight: bold; font-size: 24px; color: #6d28d9; margin-bottom: 20px; }
+              .instruction { font-weight: bold; color: #6d28d9; border-top: 1px solid #e5e7eb; pt-4 mt-4; }
             </style>
           </head>
           <body>
@@ -257,6 +259,7 @@ export default function EventsPage() {
               <h1>${eventName}</h1>
               <p>Scan to Pay via UPI</p>
               <img src="${qrCodeUrl}" />
+              <p class="instruction">Scan this QR code with Google Lens or any QR scanner</p>
               <p>Enter your details and pay securely</p>
             </div>
             <script>
@@ -390,6 +393,10 @@ export default function EventsPage() {
                               height={220}
                               className="rounded-md border p-3"
                             />
+                            <div className="mt-3 flex items-center gap-1 text-primary font-bold text-xs">
+                              <Info className="h-3 w-3" />
+                              Scan this QR code with Google Lens or any QR scanner
+                            </div>
                             <div className="mt-4 text-center w-full">
                                 <p className="text-xs text-muted-foreground mb-2">Direct Payment URL:</p>
                                 <div className="flex items-center justify-center gap-2">
