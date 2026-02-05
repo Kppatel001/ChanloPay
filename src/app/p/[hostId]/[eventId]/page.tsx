@@ -170,18 +170,18 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     />
                   </div>
                 </div>
-              </form>
-            </CardContent>
-            <CardFooter>
-                <Button onClick={handleSubmit} className="w-full font-body font-bold" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Wallet className="mr-2 h-4 w-4" />
-                  )}
-                  Continue to Pay
-                </Button>
-            </CardFooter>
+              </CardContent>
+              <CardFooter>
+                  <Button type="submit" className="w-full font-body font-bold" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Wallet className="mr-2 h-4 w-4" />
+                    )}
+                    Continue to Pay
+                  </Button>
+              </CardFooter>
+            </form>
           </Card>
         ) : (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
