@@ -1,7 +1,8 @@
+
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/header';
 import {
   Card,
@@ -32,7 +33,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, Wallet, User as UserIcon } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, Wallet, User as UserIcon, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -46,6 +47,11 @@ export default function EventsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const hostRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -88,14 +94,14 @@ export default function EventsPage() {
 
     setIsCreatingEvent(true);
 
-    const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&tn=${encodeURIComponent(newEventName)}`;
-
+    // The QR code now points to our guest-facing payment page
+    // We store a placeholder that we'll resolve on the client side
     const newEvent: Omit<Event, 'id'> = {
       hostId: user.uid,
       eventName: newEventName,
       eventDate: new Date().toISOString(),
       location: newEventLocation,
-      qrCode: upiUri,
+      qrCode: 'GUEST_PAYMENT_URL', // Placeholder
       createdAt: serverTimestamp(),
     };
     
@@ -103,7 +109,7 @@ export default function EventsPage() {
     addDoc(collectionRef, newEvent).then(() => {
       toast({
         title: "Event Created!",
-        description: `${newEvent.eventName} has been created with your UPI ID.`,
+        description: `${newEvent.eventName} has been created.`,
       });
       setNewEventName('');
       setNewEventLocation('');
@@ -207,7 +213,7 @@ export default function EventsPage() {
                   <DialogHeader>
                     <DialogTitle>Create New Event</DialogTitle>
                     <DialogDescription>
-                      Fill in the details for your new event. This will generate a UPI QR code using your profile details.
+                      Fill in the details for your new event. This will generate a scannable QR code for your guests.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
@@ -256,7 +262,8 @@ export default function EventsPage() {
 
             <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {events && events.map((event) => {
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(event.qrCode)}`;
+                const guestPayUrl = `${origin}/p/${user?.uid}/${event.id}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(guestPayUrl)}`;
                 const eventDate = new Date(event.eventDate);
 
                 return (
@@ -276,7 +283,7 @@ export default function EventsPage() {
                     </CardHeader>
                     <CardContent className="flex-1">
                       <p className="text-sm text-muted-foreground">
-                        Real UPI QR code linked to your account for receiving gifts directly.
+                        Guests scan this to enter their details before paying via UPI.
                       </p>
                     </CardContent>
                     <CardFooter className="grid grid-cols-2 gap-4 border-t pt-4 bg-muted/30">
@@ -294,7 +301,7 @@ export default function EventsPage() {
                               Scan to Pay
                             </DialogTitle>
                             <DialogDescription>
-                              Guests scan this with any UPI app (GPay, PhonePe, etc.) to pay for <strong>{event.eventName}</strong>.
+                              Guests scan this to enter their name and amount before paying for <strong>{event.eventName}</strong>.
                             </DialogDescription>
                           </DialogHeader>
                           <div className="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-inner mt-4">
@@ -305,16 +312,28 @@ export default function EventsPage() {
                               height={220}
                               className="rounded-md border p-3"
                             />
-                            <p className="mt-3 text-sm font-semibold text-primary">
-                              UPI ID: {hostProfile?.upi}
-                            </p>
+                            <div className="mt-4 text-center">
+                                <p className="text-xs text-muted-foreground mb-1">Direct Payment URL:</p>
+                                <a 
+                                    href={guestPayUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-xs font-mono text-primary flex items-center justify-center gap-1 hover:underline"
+                                >
+                                    {guestPayUrl.replace(/^https?:\/\//, '')}
+                                    <ExternalLink className="h-3 w-3" />
+                                </a>
+                            </div>
                           </div>
                           
                           <div className="mt-6 space-y-4 border-t pt-4">
                             <h4 className="font-semibold text-sm flex items-center gap-2">
-                              <Wallet className="h-4 w-4" />
-                              Record Guest Payment
+                              <UserIcon className="h-4 w-4" />
+                              Manual Guest Entry
                             </h4>
+                            <p className="text-xs text-muted-foreground">
+                                Use this if you want to record a payment manually on behalf of a guest.
+                            </p>
                             <div className="grid gap-3">
                               <div className="grid gap-1">
                                 <Label htmlFor="guest-name" className="text-xs">Guest Full Name</Label>
@@ -350,7 +369,7 @@ export default function EventsPage() {
                                 onClick={() => handleRecordTransaction(event.id!)}
                               >
                                 {isRecordingTransaction && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Record & Save Payment
+                                Record Payment
                               </Button>
                             </div>
                           </div>
