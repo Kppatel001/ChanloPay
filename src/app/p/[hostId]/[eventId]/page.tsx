@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink } from 'lucide-react';
+import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -25,6 +25,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isFinalized, setIsFinalized] = useState(false);
 
   const hostRef = useMemoFirebase(() => {
     return doc(firestore, `hosts/${resolvedParams.hostId}`);
@@ -37,7 +38,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const { data: hostProfile, isLoading: hostLoading } = useDoc<Host>(hostRef);
   const { data: eventData, isLoading: eventLoading } = useDoc<Event>(eventRef);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName || !amount) {
       toast({
@@ -47,6 +48,11 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       });
       return;
     }
+    setHasSubmitted(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!guestName || !amount) return;
 
     setIsSubmitting(true);
 
@@ -67,10 +73,10 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     
     addDoc(transactionsColRef, transactionData)
       .then(() => {
-        setHasSubmitted(true);
+        setIsFinalized(true);
         toast({
-          title: 'Details Recorded',
-          description: 'Thank you! You can now complete your payment.',
+          title: 'Payment Recorded',
+          description: 'Thank you! Your contribution has been recorded in the event history.',
         });
       })
       .catch(async (error) => {
@@ -118,7 +124,27 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
           <h1 className="font-headline text-2xl font-bold">ChanloPay</h1>
         </div>
 
-        {!hasSubmitted ? (
+        {isFinalized ? (
+          <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
+            <CardHeader className="text-center">
+              <div className="mx-auto bg-green-100 text-green-600 p-2 rounded-full w-fit mb-2">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <CardTitle className="font-headline text-xl">Thank You!</CardTitle>
+              <CardDescription className="font-body">
+                Your payment of <span className="font-bold text-foreground">₹{amount}</span> for <strong>{eventData.eventName}</strong> has been successfully recorded.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+              <p className="text-sm text-center text-muted-foreground">
+                The host has been notified of your contribution. You can now safely close this window.
+              </p>
+              <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
+                Make Another Payment
+              </Button>
+            </CardContent>
+          </Card>
+        ) : !hasSubmitted ? (
           <Card className="w-full shadow-lg border-primary/20">
             <CardHeader className="text-center">
               <CardTitle className="font-headline text-2xl">{eventData.eventName}</CardTitle>
@@ -126,7 +152,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 Hosted by <span className="font-semibold text-foreground">{hostProfile.name}</span>
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleNext}>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
                   <Label htmlFor="guestName" className="font-body">Full Name</Label>
@@ -172,13 +198,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 </div>
               </CardContent>
               <CardFooter>
-                  <Button type="submit" className="w-full font-body font-bold" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Wallet className="mr-2 h-4 w-4" />
-                    )}
-                    Continue to Pay
+                  <Button type="submit" className="w-full font-body font-bold h-12 text-lg">
+                    Next
+                    <ChevronRight className="ml-2 h-5 w-5" />
                   </Button>
               </CardFooter>
             </form>
@@ -186,12 +208,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         ) : (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
             <CardHeader className="text-center">
-              <div className="mx-auto bg-green-100 text-green-600 p-2 rounded-full w-fit mb-2">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
-              <CardTitle className="font-headline text-xl">Details Recorded</CardTitle>
+              <CardTitle className="font-headline text-xl">Pay for {eventData.eventName}</CardTitle>
               <CardDescription className="font-body">
-                Scan with any UPI app to complete your payment of <span className="font-bold text-foreground">₹{amount}</span>.
+                Scan with any UPI app to pay <span className="font-bold text-foreground">₹{amount}</span>.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
@@ -199,8 +218,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 <Image
                   src={qrCodeUrl}
                   alt="Payment QR Code"
-                  width={250}
-                  height={250}
+                  width={220}
+                  height={220}
                   className="rounded-md"
                 />
               </div>
@@ -208,7 +227,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 UPI ID: {hostProfile.upi}
               </p>
               
-              <div className="mt-8 w-full space-y-3">
+              <div className="mt-6 w-full space-y-3">
                 <Button asChild className="w-full font-body font-bold h-12 text-lg">
                   <a href={upiUri}>
                     <ExternalLink className="mr-2 h-5 w-5" />
@@ -217,18 +236,27 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 </Button>
 
                 <Button 
-                  variant="outline" 
+                  className="w-full font-body h-12 text-lg" 
+                  onClick={handleConfirmPayment}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+                  I have Paid - Save Details
+                </Button>
+
+                <Button 
+                  variant="ghost" 
                   className="w-full font-body"
                   onClick={() => setHasSubmitted(false)}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Edit Details
+                  Go Back
                 </Button>
               </div>
             </CardContent>
             <CardFooter className="bg-muted/30 pt-6">
                 <p className="text-[10px] text-center w-full text-muted-foreground font-body">
-                    Payments are secure via standard UPI protocols.
+                    Please ensure the payment is successful in your UPI app before clicking "I have Paid".
                 </p>
             </CardFooter>
           </Card>
