@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -79,9 +80,6 @@ export default function SettingsPage() {
     setIsSubmitting(true);
     const hostDocRef = doc(firestore, `hosts/${user.uid}`);
 
-    // Update the profile in the database
-    // We explicitly include the ID to match our standard entity structure if needed, 
-    // but the doc reference already targets the correct UID.
     setDoc(hostDocRef, {
       ...values,
       id: user.uid,
@@ -93,18 +91,13 @@ export default function SettingsPage() {
           description: 'Your host profile and payment details have been updated.',
         });
       })
-      .catch(async (serverError) => {
+      .catch(async (serverError: any) => {
         const permissionError = new FirestorePermissionError({
           path: hostDocRef.path,
           operation: 'update',
           requestResourceData: values,
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-          variant: 'destructive',
-          title: 'Update Failed',
-          description: 'Could not save your changes. Please check your connection.',
-        });
       })
       .finally(() => {
         setIsSubmitting(false);

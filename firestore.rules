@@ -1,12 +1,6 @@
-/**
- * Core Philosophy: This ruleset enforces a strict, user-centric ownership model.
- * All data is organized hierarchically under a host's unique ID, ensuring that
- * hosts can only access their own information and the data related to their events.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // Helper Functions
     function isSignedIn() {
       return request.auth != null;
@@ -17,31 +11,14 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to individual Host profiles and all nested data.
-     * Only the authenticated host (auth.uid == hostId) can read or write any data within their path.
+     * Controls access to individual Host profiles and all nested data.
+     * Hierarchy: /hosts/{hostId}/events/{eventId}/transactions/{transactionId}
      */
     match /hosts/{hostId} {
       allow read, write: if isOwner(hostId);
 
-      /**
-       * @description Controls access to the Events subcollection and its descendants.
-       */
-      match /events/{eventId} {
+      match /{allPaths=**} {
         allow read, write: if isOwner(hostId);
-
-        /**
-         * @description Controls access to the Transactions subcollection for a specific event.
-         */
-        match /transactions/{transactionId} {
-          allow read, write: if isOwner(hostId);
-
-          /**
-           * @description Controls access to fraudulent transaction reports.
-           */
-          match /fraudulentTransactions/{fraudulentTransactionId} {
-            allow read, write: if isOwner(hostId);
-          }
-        }
       }
     }
   }
