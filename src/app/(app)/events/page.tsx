@@ -32,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, Wallet, User as UserIcon, Link as LinkIcon, ExternalLink, Home } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -140,13 +140,13 @@ export default function EventsPage() {
     const transactionData = {
       name: guestName,
       village: villageName,
-      email: 'N/A',
+      email: 'Manual Entry',
       amount: amount,
       transactionDate: new Date().toISOString(),
       status: 'Success',
       type: 'Gift',
       paymentMethod: 'UPI',
-      receiptQrCode: `chanlopay_txn_${Date.now()}`,
+      receiptQrCode: `manual_txn_${Date.now()}`,
       eventId: eventId,
     };
 
@@ -192,6 +192,24 @@ export default function EventsPage() {
       });
       errorEmitter.emit('permission-error', permissionError);
     });
+  };
+
+  const handleShareLink = (url: string, eventName: string) => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Pay for ${eventName}`,
+        text: `Please use this link to pay for ${eventName} via ChanloPay:`,
+        url: url,
+      }).catch(err => {
+        console.error('Error sharing:', err);
+      });
+    } else {
+      navigator.clipboard.writeText(url);
+      toast({
+        title: "Link Copied!",
+        description: "Event payment link has been copied to clipboard.",
+      });
+    }
   };
 
   return (
@@ -301,7 +319,7 @@ export default function EventsPage() {
                               Scan to Pay
                             </DialogTitle>
                             <DialogDescription>
-                              Guests scan this to enter their name and amount before paying for <strong>{event.eventName}</strong>.
+                              Guests scan this to enter their name and village before paying for <strong>{event.eventName}</strong>.
                             </DialogDescription>
                           </DialogHeader>
                           <div className="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-inner mt-4">
@@ -312,18 +330,36 @@ export default function EventsPage() {
                               height={220}
                               className="rounded-md border p-3"
                             />
-                            <div className="mt-4 text-center">
-                                <p className="text-xs text-muted-foreground mb-1">Direct Payment URL:</p>
-                                <a 
-                                    href={guestPayUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-xs font-mono text-primary flex items-center justify-center gap-1 hover:underline"
-                                >
-                                    {guestPayUrl.replace(/^https?:\/\//, '')}
-                                    <ExternalLink className="h-3 w-3" />
-                                </a>
+                            <div className="mt-4 text-center w-full">
+                                <p className="text-xs text-muted-foreground mb-2">Direct Payment URL:</p>
+                                <div className="flex items-center justify-center gap-2">
+                                  <a 
+                                      href={guestPayUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-xs font-mono text-primary flex items-center justify-center gap-1 hover:underline truncate max-w-[200px]"
+                                  >
+                                      {guestPayUrl.replace(/^https?:\/\//, '')}
+                                      <ExternalLink className="h-3 w-3 shrink-0" />
+                                  </a>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-8 w-8"
+                                    onClick={() => handleShareLink(guestPayUrl, event.eventName)}
+                                  >
+                                    <Share2 className="h-4 w-4 text-primary" />
+                                  </Button>
+                                </div>
                             </div>
+                            <Button 
+                              className="mt-4 w-full" 
+                              variant="secondary"
+                              onClick={() => handleShareLink(guestPayUrl, event.eventName)}
+                            >
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Share Event Link
+                            </Button>
                           </div>
                           
                           <div className="mt-6 space-y-4 border-t pt-4">
