@@ -2,45 +2,29 @@
  * Core Philosophy: This ruleset enforces a strict, user-centric ownership model.
  * All data is organized hierarchically under a host's unique ID, ensuring that
  * hosts can only access their own information and the data related to their events.
- *
- * Security Model:
- * - Path-based Ownership: Access is granted if the {hostId} in the path matches the authenticated user's UID.
- * - Simplicity: Rules focus on authorization (who can access) rather than complex data validation,
- *   which is more suitable for rapid prototyping and avoids common "immutable field" errors.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper Functions
-
-    /**
-     * Checks if a user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user is the owner of a document tree,
-     * based on the provided hostId.
-     */
     function isOwner(hostId) {
       return isSignedIn() && request.auth.uid == hostId;
     }
 
     /**
      * @description Controls access to individual Host profiles and all nested data.
-     * @path /hosts/{hostId}
-     * @principle Only the authenticated host (auth.uid == hostId) can read or write any data within their path.
+     * Only the authenticated host (auth.uid == hostId) can read or write any data within their path.
      */
     match /hosts/{hostId} {
-      // Allow read/write access to the host document itself if the user is the owner.
       allow read, write: if isOwner(hostId);
 
       /**
        * @description Controls access to the Events subcollection and its descendants.
-       * @path /hosts/{hostId}/events/{eventId}
        */
       match /events/{eventId} {
         allow read, write: if isOwner(hostId);

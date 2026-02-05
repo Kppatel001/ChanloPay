@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { doc, setDoc } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User, Phone, Wallet } from 'lucide-react';
 
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { Header } from '@/components/layout/header';
@@ -40,7 +40,7 @@ const profileFormSchema = z.object({
     .min(10, 'Please enter a valid 10-digit mobile number.')
     .max(10, 'Please enter a valid 10-digit mobile number.')
     .regex(/^\d+$/, 'Mobile number must contain only digits.'),
-  upi: z.string().min(3, 'Please enter a valid UPI ID.'),
+  upi: z.string().min(3, 'Please enter a valid UPI ID (e.g. name@bank).'),
 });
 
 export default function SettingsPage() {
@@ -80,11 +80,17 @@ export default function SettingsPage() {
     const hostDocRef = doc(firestore, `hosts/${user.uid}`);
 
     // Update the profile in the database
-    setDoc(hostDocRef, values, { merge: true })
+    // We explicitly include the ID to match our standard entity structure if needed, 
+    // but the doc reference already targets the correct UID.
+    setDoc(hostDocRef, {
+      ...values,
+      id: user.uid,
+      email: user.email,
+    }, { merge: true })
       .then(() => {
         toast({
-          title: 'Profile Updated',
-          description: 'Your profile has been saved successfully.',
+          title: 'Settings Saved',
+          description: 'Your host profile and payment details have been updated.',
         });
       })
       .catch(async (serverError) => {
@@ -96,8 +102,8 @@ export default function SettingsPage() {
         errorEmitter.emit('permission-error', permissionError);
         toast({
           variant: 'destructive',
-          title: 'Uh oh! Something went wrong.',
-          description: 'Could not save your profile. Please try again.',
+          title: 'Update Failed',
+          description: 'Could not save your changes. Please check your connection.',
         });
       })
       .finally(() => {
@@ -109,69 +115,87 @@ export default function SettingsPage() {
     <div className="flex min-h-screen w-full flex-col">
       <Header pageTitle="Settings" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Card className="w-full max-w-2xl">
+        <Card className="w-full max-w-2xl shadow-md">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardHeader>
-                <CardTitle>Profile</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-6 w-6" />
+                  Host Profile
+                </CardTitle>
                 <CardDescription>
-                  Manage your account settings and payment details. This information is required to create events.
+                  Your payment details are used to generate QR codes for your events. Ensure your UPI ID is correct to receive payments.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        <User className="h-4 w-4 opacity-70" />
+                        Full Name
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="Your full name" {...field} />
+                        <Input placeholder="Enter your full name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Registered Email</Label>
                   <Input
                     id="email"
                     type="email"
                     disabled
-                    className="bg-muted cursor-not-allowed"
+                    className="bg-muted text-muted-foreground cursor-not-allowed"
                     value={user?.email ?? ''}
                   />
-                  <p className="text-xs text-muted-foreground">Your email address is managed automatically.</p>
+                  <p className="text-xs text-muted-foreground">Contact support to change your email address.</p>
                 </div>
+
                 <FormField
                   control={form.control}
                   name="mobile"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mobile Number</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 opacity-70" />
+                        Mobile Number
+                      </FormLabel>
                       <FormControl>
-                        <Input type="tel" placeholder="Your mobile number" {...field} />
+                        <Input type="tel" placeholder="10-digit mobile number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="upi"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>UPI ID</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        <Wallet className="h-4 w-4 opacity-70" />
+                        UPI ID (VPA)
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="your-upi-id@okhdfcbank" {...field} />
+                        <Input placeholder="e.g., yourname@okaxis" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        This UPI ID will be used for all event QR codes.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </CardContent>
-              <CardFooter>
-                <Button type="submit" disabled={isSubmitting}>
+              <CardFooter className="bg-muted/30 border-t py-4">
+                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>
