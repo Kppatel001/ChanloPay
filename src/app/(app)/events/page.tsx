@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -31,8 +32,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus } from 'lucide-react';
+import type { Event, Host, Transaction } from '@/lib/types';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, Wallet, User as UserIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -63,6 +64,11 @@ export default function EventsPage() {
   const [newEventName, setNewEventName] = useState('');
   const [newEventLocation, setNewEventLocation] = useState('');
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+
+  // Recording transaction state
+  const [guestName, setGuestName] = useState('');
+  const [guestAmount, setGuestAmount] = useState('');
+  const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   
   const handleOpenCreateEventDialog = () => {
     const isProfileComplete = hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi;
@@ -83,8 +89,6 @@ export default function EventsPage() {
 
     setIsCreatingEvent(true);
 
-    // Construct standard UPI payment URI
-    // Format: upi://pay?pa=<UPI_ID>&pn=<NAME>&cu=INR&tn=<NOTE>
     const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&tn=${encodeURIComponent(newEventName)}`;
 
     const newEvent: Omit<Event, 'id'> = {
@@ -105,41 +109,6 @@ export default function EventsPage() {
       setNewEventName('');
       setNewEventLocation('');
       setCreateDialogOpen(false);
-
-      // Add dummy transactions for visualization
-      const eventId = docRef.id;
-      const transactionsColRef = collection(firestore, `hosts/${user.uid}/events/${eventId}/transactions`);
-      const dummyTransactions = [
-        {
-          name: 'Olivia Martin',
-          email: 'olivia.martin@email.com',
-          amount: Math.floor(Math.random() * 500) + 100,
-          transactionDate: new Date().toISOString(),
-          status: 'Success',
-          type: 'Gift',
-          paymentMethod: 'UPI',
-          receiptQrCode: `chanlopay_txn_${Date.now()}_1`,
-          eventId: eventId,
-        },
-        {
-          name: 'Liam Brown',
-          email: 'liam.brown@email.com',
-          amount: Math.floor(Math.random() * 200) + 50,
-          transactionDate: new Date(Date.now() - 3600000).toISOString(),
-          status: 'Success',
-          type: 'Gift',
-          paymentMethod: 'UPI',
-          receiptQrCode: `chanlopay_txn_${Date.now()}_2`,
-          eventId: eventId,
-        }
-      ];
-
-      dummyTransactions.forEach(tx => {
-        addDoc(transactionsColRef, tx).catch(async () => {
-            // Error handling handled by global emitter
-        });
-      });
-
     }).catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
         path: collectionRef.path,
@@ -150,6 +119,55 @@ export default function EventsPage() {
     }).finally(() => {
       setIsCreatingEvent(false);
     });
+  };
+
+  const handleRecordTransaction = async (eventId: string) => {
+    if (!guestName || !guestAmount || !user || !firestore || !eventId) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Details',
+        description: 'Please enter guest name and amount.',
+      });
+      return;
+    }
+
+    setIsRecordingTransaction(true);
+
+    const amount = parseFloat(guestAmount);
+    const transactionData = {
+      name: guestName,
+      email: 'N/A',
+      amount: amount,
+      transactionDate: new Date().toISOString(),
+      status: 'Success',
+      type: 'Gift',
+      paymentMethod: 'UPI',
+      receiptQrCode: `chanlopay_txn_${Date.now()}`,
+      eventId: eventId,
+    };
+
+    const transactionsColRef = collection(firestore, `hosts/${user.uid}/events/${eventId}/transactions`);
+    
+    addDoc(transactionsColRef, transactionData)
+      .then(() => {
+        toast({
+          title: "Payment Recorded",
+          description: `Successfully recorded ${amount} from ${guestName}.`,
+        });
+        setGuestName('');
+        setGuestAmount('');
+      })
+      .catch(async () => {
+        const permissionError = new FirestorePermissionError({
+          path: transactionsColRef.path,
+          operation: 'create',
+          requestResourceData: transactionData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsRecordingTransaction(false);
+      });
   };
 
   const handleDeleteEvent = (eventId: string) => {
@@ -243,7 +261,7 @@ export default function EventsPage() {
                 const eventDate = new Date(event.eventDate);
 
                 return (
-                  <Card key={event.id} className="overflow-hidden">
+                  <Card key={event.id} className="overflow-hidden flex flex-col">
                     <CardHeader>
                       <CardTitle className="truncate">{event.eventName}</CardTitle>
                       <div className="space-y-1">
@@ -257,7 +275,7 @@ export default function EventsPage() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1">
                       <p className="text-sm text-muted-foreground">
                         Scannable UPI QR code generated for receiving gifts directly to your account.
                       </p>
@@ -270,31 +288,72 @@ export default function EventsPage() {
                             View QR
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
+                        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                               <QrCode className="h-5 w-5" />
                               Scan to Pay
                             </DialogTitle>
                             <DialogDescription>
-                              Guests can scan this code with any UPI app (GPay, PhonePe, etc.) to send a gift for <strong>{event.eventName}</strong>.
+                              Guests can scan this code with any UPI app to send a gift for <strong>{event.eventName}</strong>.
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-inner mt-4">
+                          <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-inner mt-4">
                             <Image
                               src={qrCodeUrl}
                               alt={`QR Code for ${event.eventName}`}
-                              width={250}
-                              height={250}
+                              width={200}
+                              height={200}
                               className="rounded-md border p-2"
                             />
-                            <p className="mt-4 text-xs font-mono text-muted-foreground bg-muted p-2 rounded max-w-full truncate">
+                            <p className="mt-2 text-xs font-mono text-muted-foreground bg-muted p-2 rounded max-w-full truncate">
                               UPI ID: {hostProfile?.upi}
                             </p>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="qr-link">UPI Link</Label>
-                            <Input id="qr-link" readOnly value={event.qrCode} className="text-xs" />
+                          
+                          <div className="mt-6 space-y-4 border-t pt-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2">
+                              <Wallet className="h-4 w-4" />
+                              Record Guest Payment
+                            </h4>
+                            <div className="grid gap-3">
+                              <div className="grid gap-1">
+                                <Label htmlFor="guest-name" className="text-xs">Guest Name</Label>
+                                <div className="relative">
+                                  <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input 
+                                    id="guest-name" 
+                                    placeholder="Enter guest name" 
+                                    className="pl-9"
+                                    value={guestName}
+                                    onChange={(e) => setGuestName(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid gap-1">
+                                <Label htmlFor="guest-amount" className="text-xs">Amount</Label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">₹</span>
+                                  <Input 
+                                    id="guest-amount" 
+                                    type="number" 
+                                    placeholder="Enter amount" 
+                                    className="pl-7"
+                                    value={guestAmount}
+                                    onChange={(e) => setGuestAmount(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <Button 
+                                className="w-full mt-2" 
+                                size="sm"
+                                disabled={isRecordingTransaction}
+                                onClick={() => handleRecordTransaction(event.id!)}
+                              >
+                                {isRecordingTransaction && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Record Payment
+                              </Button>
+                            </div>
                           </div>
                         </DialogContent>
                       </Dialog>
@@ -331,3 +390,4 @@ export default function EventsPage() {
     </div>
   );
 }
+

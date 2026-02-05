@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,6 +16,7 @@ service cloud.firestore {
      * Hierarchy: /hosts/{hostId}/events/{eventId}/transactions/{transactionId}
      */
     match /hosts/{hostId} {
+      // Simplified rules to ensure host can always manage their own data
       allow read, write: if isOwner(hostId);
 
       match /{allPaths=**} {
