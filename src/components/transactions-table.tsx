@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileDown, Loader2 } from 'lucide-react';
+import { FileDown, Loader2, User } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,7 +88,7 @@ export function TransactionsTable() {
               allTransactions.push({
                 id: doc.id,
                 amount: data.amount || 0,
-                name: data.name || 'Unknown User',
+                name: data.name || 'Guest',
                 email: data.email || 'N/A',
                 status: data.status || 'Success',
                 type: data.type || 'Gift',
@@ -130,49 +130,46 @@ export function TransactionsTable() {
   };
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
     }).format(amount);
 
   const handleExportPDF = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     doc.autoTable({
-      head: [['Event', 'User', 'Email', 'Amount', 'Date', 'Status']],
+      head: [['Event', 'Guest Name', 'Amount', 'Date', 'Status']],
       body: transactions.map((t) => [
         t.eventName,
         t.name,
-        t.email,
         formatCurrency(t.amount),
         t.date.toLocaleDateString(),
         t.status,
       ]),
     });
-    doc.save('transactions.pdf');
+    doc.save('guest_payments.pdf');
   };
 
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       transactions.map((t) => ({
         Event: t.eventName,
-        User: t.name,
-        Email: t.email,
+        'Guest Name': t.name,
         Amount: t.amount,
         Date: t.date,
         Status: t.status,
-        Type: t.type,
       }))
     );
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
-    XLSX.writeFile(workbook, 'transactions.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Payments');
+    XLSX.writeFile(workbook, 'guest_payments.xlsx');
   };
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
+          <CardTitle>Guest Payments</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex h-48 items-center justify-center">
@@ -186,7 +183,7 @@ export function TransactionsTable() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Transaction History</CardTitle>
+        <CardTitle>Guest Payment History</CardTitle>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">
@@ -210,8 +207,7 @@ export function TransactionsTable() {
             <TableHeader>
               <TableRow>
                 <TableHead>Event</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Guest Full Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
@@ -224,18 +220,17 @@ export function TransactionsTable() {
                       {transaction.eventName}
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{transaction.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {transaction.email}
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{transaction.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{transaction.type}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(transaction.status)}>
                         {transaction.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right font-semibold">
                       {formatCurrency(transaction.amount)}
                     </TableCell>
                   </TableRow>
@@ -243,10 +238,10 @@ export function TransactionsTable() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={4}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    No transactions yet.
+                    No guest payments recorded yet.
                   </TableCell>
                 </TableRow>
               )}
@@ -257,7 +252,7 @@ export function TransactionsTable() {
           <div className="text-sm text-muted-foreground">
             Showing {transactions.length > 0 ? start + 1 : 0} to{' '}
             {Math.min(end, transactions.length)} of {transactions.length}{' '}
-            transactions.
+            recorded payments.
           </div>
           <div className="flex gap-2">
             <Button

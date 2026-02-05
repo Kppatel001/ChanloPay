@@ -5,10 +5,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { Transaction } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { User } from 'lucide-react';
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -22,16 +22,16 @@ export function RecentTransactions({
   const recentTransactions = transactions.slice(0, 5);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
     }).format(amount);
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle>Recent Payments</CardTitle>
           <div className="text-sm text-muted-foreground">
             <Skeleton className="h-4 w-48" />
           </div>
@@ -55,40 +55,30 @@ export function RecentTransactions({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
+        <CardTitle>Recent Payments</CardTitle>
         <CardDescription>
-          You have {transactions.length} transactions.
+          Last 5 guest payments recorded.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {recentTransactions.length > 0 ? (
-          recentTransactions.map((transaction, index) => {
-            const avatar = PlaceHolderImages.find(
-              (p) => p.id === `user-avatar-${index + 1}`
-            );
+          recentTransactions.map((transaction) => {
             return (
               <div key={transaction.id} className="flex items-center">
                 <Avatar className="h-9 w-9">
-                  {avatar && (
-                    <AvatarImage
-                      src={avatar.imageUrl}
-                      alt="Avatar"
-                      data-ai-hint={avatar.imageHint}
-                    />
-                  )}
-                  <AvatarFallback>
-                    {transaction.name.charAt(0).toUpperCase()}
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <User className="h-4 w-4" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="ml-4 space-y-1">
                   <p className="text-sm font-medium leading-none">
                     {transaction.name}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {transaction.email}
+                  <p className="text-xs text-muted-foreground">
+                    {transaction.eventName}
                   </p>
                 </div>
-                <div className="ml-auto font-medium">
+                <div className="ml-auto font-bold text-sm">
                   +{formatCurrency(transaction.amount)}
                 </div>
               </div>
@@ -96,7 +86,7 @@ export function RecentTransactions({
           })
         ) : (
           <div className="flex h-48 items-center justify-center text-center text-muted-foreground">
-            No recent transactions.
+            No payments recorded.
           </div>
         )}
       </CardContent>

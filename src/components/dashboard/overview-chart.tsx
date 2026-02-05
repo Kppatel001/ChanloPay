@@ -1,6 +1,6 @@
 'use client';
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface OverviewChartProps {
@@ -29,11 +29,11 @@ export function OverviewChart({ data, isLoading }: OverviewChartProps) {
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) =>
-              value > 1000
-                ? `$${(value / 1000).toFixed(1)}k`
-                : `$${value}`
-            }
+            tickFormatter={(value) => `₹${value}`}
+          />
+          <Tooltip 
+            formatter={(value) => [`₹${value}`, 'Revenue']}
+            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
           />
           <Bar
             dataKey="revenue"

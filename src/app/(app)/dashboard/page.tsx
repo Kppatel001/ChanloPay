@@ -56,15 +56,15 @@ export default function DashboardPage() {
             const querySnapshot = await getDocs(transactionsQuery);
             querySnapshot.forEach((doc) => {
               const data = doc.data();
-              // Adapt firestore data to the Transaction type used in UI components
               allTransactions.push({
                 id: doc.id,
                 amount: data.amount || 0,
-                name: data.name || 'Unknown User',
+                name: data.name || 'Guest',
                 email: data.email || 'N/A',
                 status: data.status || 'Success',
                 type: data.type || 'Gift',
                 date: data.transactionDate ? new Date(data.transactionDate) : new Date(),
+                eventName: event.eventName,
               });
             });
           }

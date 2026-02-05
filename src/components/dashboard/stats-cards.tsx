@@ -21,9 +21,9 @@ export function StatsCards({
   isLoading,
 }: StatsCardsProps) {
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
     }).format(amount);
 
   if (isLoading) {
@@ -58,31 +58,31 @@ export function StatsCards({
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Transactions</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            +{totalTransactions}
+            {totalTransactions}
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">New Events</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Events</CardTitle>
           <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">+{eventsCount}</div>
+          <div className="text-2xl font-bold">{eventsCount}</div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Now</CardTitle>
+          <CardTitle className="text-sm font-medium">Status</CardTitle>
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">+0</div>
+          <div className="text-2xl font-bold">Live</div>
         </CardContent>
       </Card>
     </div>

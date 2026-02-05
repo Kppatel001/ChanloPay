@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -49,7 +48,7 @@ export default function EventsPage() {
   const { toast } = useToast();
 
   const hostRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return doc(firestore, `hosts/${user.uid}`);
   }, [user, firestore]);
   const { data: hostProfile } = useDoc<Host>(hostRef);
@@ -101,7 +100,7 @@ export default function EventsPage() {
     };
     
     const collectionRef = collection(firestore, `hosts/${user.uid}/events`);
-    addDoc(collectionRef, newEvent).then((docRef) => {
+    addDoc(collectionRef, newEvent).then(() => {
       toast({
         title: "Event Created!",
         description: `${newEvent.eventName} has been created with your UPI ID.`,
@@ -109,7 +108,7 @@ export default function EventsPage() {
       setNewEventName('');
       setNewEventLocation('');
       setCreateDialogOpen(false);
-    }).catch(async (serverError) => {
+    }).catch(async () => {
       const permissionError = new FirestorePermissionError({
         path: collectionRef.path,
         operation: 'create',
@@ -126,7 +125,7 @@ export default function EventsPage() {
       toast({
         variant: 'destructive',
         title: 'Missing Details',
-        description: 'Please enter guest name and amount.',
+        description: 'Please enter guest full name and amount.',
       });
       return;
     }
@@ -221,7 +220,7 @@ export default function EventsPage() {
                         value={newEventName}
                         onChange={(e) => setNewEventName(e.target.value)}
                         className="col-span-3"
-                        placeholder="e.g., John & Jane's Wedding"
+                        placeholder="e.g., Wedding Ceremony"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -233,7 +232,7 @@ export default function EventsPage() {
                         value={newEventLocation}
                         onChange={(e) => setNewEventLocation(e.target.value)}
                         className="col-span-3"
-                        placeholder="e.g., The Grand Ballroom"
+                        placeholder="e.g., Grand Palace Hotel"
                       />
                     </div>
                   </div>
@@ -261,7 +260,7 @@ export default function EventsPage() {
                 const eventDate = new Date(event.eventDate);
 
                 return (
-                  <Card key={event.id} className="overflow-hidden flex flex-col">
+                  <Card key={event.id} className="overflow-hidden flex flex-col shadow-md">
                     <CardHeader>
                       <CardTitle className="truncate">{event.eventName}</CardTitle>
                       <div className="space-y-1">
@@ -277,7 +276,7 @@ export default function EventsPage() {
                     </CardHeader>
                     <CardContent className="flex-1">
                       <p className="text-sm text-muted-foreground">
-                        Scannable UPI QR code generated for receiving gifts directly to your account.
+                        Real UPI QR code linked to your account for receiving gifts directly.
                       </p>
                     </CardContent>
                     <CardFooter className="grid grid-cols-2 gap-4 border-t pt-4 bg-muted/30">
@@ -295,18 +294,18 @@ export default function EventsPage() {
                               Scan to Pay
                             </DialogTitle>
                             <DialogDescription>
-                              Guests can scan this code with any UPI app to send a gift for <strong>{event.eventName}</strong>.
+                              Guests scan this with any UPI app (GPay, PhonePe, etc.) to pay for <strong>{event.eventName}</strong>.
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-inner mt-4">
+                          <div className="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-inner mt-4">
                             <Image
                               src={qrCodeUrl}
                               alt={`QR Code for ${event.eventName}`}
-                              width={200}
-                              height={200}
-                              className="rounded-md border p-2"
+                              width={220}
+                              height={220}
+                              className="rounded-md border p-3"
                             />
-                            <p className="mt-2 text-xs font-mono text-muted-foreground bg-muted p-2 rounded max-w-full truncate">
+                            <p className="mt-3 text-sm font-semibold text-primary">
                               UPI ID: {hostProfile?.upi}
                             </p>
                           </div>
@@ -318,12 +317,12 @@ export default function EventsPage() {
                             </h4>
                             <div className="grid gap-3">
                               <div className="grid gap-1">
-                                <Label htmlFor="guest-name" className="text-xs">Guest Name</Label>
+                                <Label htmlFor="guest-name" className="text-xs">Guest Full Name</Label>
                                 <div className="relative">
                                   <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                   <Input 
                                     id="guest-name" 
-                                    placeholder="Enter guest name" 
+                                    placeholder="Enter full name" 
                                     className="pl-9"
                                     value={guestName}
                                     onChange={(e) => setGuestName(e.target.value)}
@@ -331,7 +330,7 @@ export default function EventsPage() {
                                 </div>
                               </div>
                               <div className="grid gap-1">
-                                <Label htmlFor="guest-amount" className="text-xs">Amount</Label>
+                                <Label htmlFor="guest-amount" className="text-xs">Amount Received</Label>
                                 <div className="relative">
                                   <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">₹</span>
                                   <Input 
@@ -351,7 +350,7 @@ export default function EventsPage() {
                                 onClick={() => handleRecordTransaction(event.id!)}
                               >
                                 {isRecordingTransaction && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Record Payment
+                                Record & Save Payment
                               </Button>
                             </div>
                           </div>
@@ -390,4 +389,3 @@ export default function EventsPage() {
     </div>
   );
 }
-
