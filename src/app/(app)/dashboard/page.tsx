@@ -45,34 +45,39 @@ export default function DashboardPage() {
         return;
       }
 
-      const allTransactions: Transaction[] = [];
-      // Fetch transactions for all events
-      await Promise.all(
-        events.map(async (event) => {
-          if (event.id) {
-            const transactionsQuery = query(
-              collection(firestore, `hosts/${user.uid}/events/${event.id}/transactions`)
-            );
-            const querySnapshot = await getDocs(transactionsQuery);
-            querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              allTransactions.push({
-                id: doc.id,
-                amount: data.amount || 0,
-                name: data.name || 'Guest',
-                email: data.email || 'N/A',
-                status: data.status || 'Success',
-                type: data.type || 'Gift',
-                date: data.transactionDate ? new Date(data.transactionDate) : new Date(),
-                eventName: event.eventName,
-              });
-            });
-          }
-        })
-      );
+      try {
+        const allTransactions: Transaction[] = [];
+        await Promise.all(
+            events.map(async (event) => {
+            if (event.id) {
+                const transactionsQuery = query(
+                collection(firestore, `hosts/${user.uid}/events/${event.id}/transactions`)
+                );
+                const querySnapshot = await getDocs(transactionsQuery);
+                querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                allTransactions.push({
+                    id: doc.id,
+                    amount: data.amount || 0,
+                    name: data.name || 'Guest',
+                    village: data.village || 'N/A',
+                    email: data.email || 'N/A',
+                    status: data.status || 'Success',
+                    type: data.type || 'Gift',
+                    date: data.transactionDate ? new Date(data.transactionDate) : new Date(),
+                    eventName: event.eventName,
+                });
+                });
+            }
+            })
+        );
 
-      setTransactions(allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime()));
-      setTransactionsLoading(false);
+        setTransactions(allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime()));
+      } catch (error) {
+        console.error("Dashboard: Error fetching transactions:", error);
+      } finally {
+        setTransactionsLoading(false);
+      }
     };
 
     fetchTransactions();

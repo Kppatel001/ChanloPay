@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileDown, Loader2, User, Trash2, Home } from 'lucide-react';
+import { FileDown, Loader2, User, Trash2, Home, RefreshCw } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,57 +68,62 @@ export function TransactionsTable() {
     if (!firestore || !user) return;
     
     setIsLoading(true);
-    const eventsQuery = query(
-      collection(firestore, `hosts/${user.uid}/events`)
-    );
-    const eventsSnapshot = await getDocs(eventsQuery);
-    const events = eventsSnapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    })) as Event[];
+    try {
+        const eventsQuery = query(
+        collection(firestore, `hosts/${user.uid}/events`)
+        );
+        const eventsSnapshot = await getDocs(eventsQuery);
+        const events = eventsSnapshot.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+        })) as Event[];
 
-    if (events.length === 0) {
-      setTransactions([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const allTransactions: Transaction[] = [];
-    await Promise.all(
-      events.map(async (event) => {
-        if (event.id) {
-          const transactionsQuery = query(
-            collection(
-              firestore,
-              `hosts/${user.uid}/events/${event.id}/transactions`
-            )
-          );
-          const querySnapshot = await getDocs(transactionsQuery);
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            allTransactions.push({
-              id: doc.id,
-              amount: data.amount || 0,
-              name: data.name || 'Guest',
-              village: data.village || 'N/A',
-              email: data.email || 'N/A',
-              status: data.status || 'Success',
-              type: data.type || 'Gift',
-              date: data.transactionDate
-                ? new Date(data.transactionDate)
-                : new Date(),
-              eventName: event.eventName,
-              eventId: event.id,
-            });
-          });
+        if (events.length === 0) {
+        setTransactions([]);
+        setIsLoading(false);
+        return;
         }
-      })
-    );
 
-    setTransactions(
-      allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime())
-    );
-    setIsLoading(false);
+        const allTransactions: Transaction[] = [];
+        await Promise.all(
+        events.map(async (event) => {
+            if (event.id) {
+            const transactionsQuery = query(
+                collection(
+                firestore,
+                `hosts/${user.uid}/events/${event.id}/transactions`
+                )
+            );
+            const querySnapshot = await getDocs(transactionsQuery);
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                allTransactions.push({
+                id: doc.id,
+                amount: data.amount || 0,
+                name: data.name || 'Guest',
+                village: data.village || 'N/A',
+                email: data.email || 'N/A',
+                status: data.status || 'Success',
+                type: data.type || 'Gift',
+                date: data.transactionDate
+                    ? new Date(data.transactionDate)
+                    : new Date(),
+                eventName: event.eventName,
+                eventId: event.id,
+                });
+            });
+            }
+        })
+        );
+
+        setTransactions(
+        allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime())
+        );
+    } catch (error) {
+        console.error("Error fetching transactions:", error);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -153,19 +158,6 @@ export function TransactionsTable() {
   const paginatedTransactions = transactions.slice(start, end);
   const totalPages = Math.ceil(transactions.length / perPage);
 
-  const getStatusVariant = (status: Transaction['status']) => {
-    switch (status) {
-      case 'Success':
-        return 'default';
-      case 'Pending':
-        return 'secondary';
-      case 'Failed':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  };
-
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -175,14 +167,13 @@ export function TransactionsTable() {
   const handleExportPDF = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     doc.autoTable({
-      head: [['Event', 'Guest Name', 'Village', 'Amount', 'Date', 'Status']],
+      head: [['Event', 'Guest Name', 'Village', 'Amount', 'Date']],
       body: transactions.map((t) => [
         t.eventName,
         t.name,
         t.village || 'N/A',
         formatCurrency(t.amount),
         t.date.toLocaleDateString(),
-        t.status,
       ]),
     });
     doc.save('guest_payments.pdf');
@@ -196,7 +187,6 @@ export function TransactionsTable() {
         Village: t.village || 'N/A',
         Amount: t.amount,
         Date: t.date,
-        Status: t.status,
       }))
     );
     const workbook = XLSX.utils.book_new();
@@ -208,7 +198,7 @@ export function TransactionsTable() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Guest Payments</CardTitle>
+          <CardTitle>Guest Payment History</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex h-48 items-center justify-center">
@@ -225,6 +215,7 @@ export function TransactionsTable() {
         <CardTitle>Guest Payment History</CardTitle>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => fetchAllTransactions()}>
+             <RefreshCw className="mr-2 h-4 w-4" />
              Refresh
           </Button>
           <DropdownMenu>
@@ -274,11 +265,11 @@ export function TransactionsTable() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Home className="h-4 w-4 text-muted-foreground" />
-                        <span>{transaction.village}</span>
+                        <span>{transaction.village || 'N/A'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusVariant(transaction.status)}>
+                      <Badge variant="default">
                         {transaction.status}
                       </Badge>
                     </TableCell>
