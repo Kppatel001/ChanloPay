@@ -412,20 +412,14 @@ export default function EventsPage() {
                                   </Button>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 mt-4 w-full">
+                            <div className="mt-4 w-full">
                               <Button 
-                                variant="secondary"
-                                onClick={() => handleShareLink(guestPayUrl, event.eventName)}
-                              >
-                                <Share2 className="mr-2 h-4 w-4" />
-                                Share
-                              </Button>
-                              <Button 
+                                className="w-full"
                                 variant="outline"
                                 onClick={() => handlePrint(qrCodeUrl, event.eventName)}
                               >
                                 <Printer className="mr-2 h-4 w-4" />
-                                Print
+                                Print QR Code
                               </Button>
                             </div>
                           </div>
