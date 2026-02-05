@@ -32,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2 } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -212,6 +212,57 @@ export default function EventsPage() {
     }
   };
 
+  const handlePrint = (qrCodeUrl: string, eventName: string) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print QR Code - ${eventName}</title>
+            <style>
+              body { 
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                height: 100vh; 
+                margin: 0; 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                text-align: center;
+              }
+              .container {
+                border: 2px solid #6d28d9;
+                padding: 40px;
+                border-radius: 20px;
+                background: white;
+              }
+              img { width: 400px; height: 400px; margin-bottom: 20px; }
+              h1 { margin: 0; color: #6d28d9; font-size: 32px; }
+              p { font-size: 18px; color: #4b5563; margin-top: 10px; }
+              .logo { font-weight: bold; font-size: 24px; color: #6d28d9; margin-bottom: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="logo">ChanloPay</div>
+              <h1>${eventName}</h1>
+              <p>Scan to Pay via UPI</p>
+              <img src="${qrCodeUrl}" />
+              <p>Enter your details and pay securely</p>
+            </div>
+            <script>
+              window.onload = () => {
+                window.print();
+                window.close();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header pageTitle="Events" />
@@ -281,7 +332,7 @@ export default function EventsPage() {
             <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {events && events.map((event) => {
                 const guestPayUrl = `${origin}/p/${user?.uid}/${event.id}`;
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(guestPayUrl)}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(guestPayUrl)}`;
                 const eventDate = new Date(event.eventDate);
 
                 return (
@@ -352,14 +403,22 @@ export default function EventsPage() {
                                   </Button>
                                 </div>
                             </div>
-                            <Button 
-                              className="mt-4 w-full" 
-                              variant="secondary"
-                              onClick={() => handleShareLink(guestPayUrl, event.eventName)}
-                            >
-                              <Share2 className="mr-2 h-4 w-4" />
-                              Share Event Link
-                            </Button>
+                            <div className="grid grid-cols-2 gap-3 mt-4 w-full">
+                              <Button 
+                                variant="secondary"
+                                onClick={() => handleShareLink(guestPayUrl, event.eventName)}
+                              >
+                                <Share2 className="mr-2 h-4 w-4" />
+                                Share
+                              </Button>
+                              <Button 
+                                variant="outline"
+                                onClick={() => handlePrint(qrCodeUrl, event.eventName)}
+                              >
+                                <Printer className="mr-2 h-4 w-4" />
+                                Print
+                              </Button>
+                            </div>
                           </div>
                           
                           <div className="mt-6 space-y-4 border-t pt-4">
