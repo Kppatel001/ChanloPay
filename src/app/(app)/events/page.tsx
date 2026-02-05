@@ -49,7 +49,9 @@ export default function EventsPage() {
   const [origin, setOrigin] = useState('');
 
   useEffect(() => {
-    setOrigin(window.location.origin);
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin);
+    }
   }, []);
 
   const hostRef = useMemoFirebase(() => {
@@ -195,20 +197,27 @@ export default function EventsPage() {
   };
 
   const handleShareLink = (url: string, eventName: string) => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Pay for ${eventName}`,
-        text: `Please use this link to pay for ${eventName} via ChanloPay:`,
-        url: url,
-      }).catch(err => {
-        console.error('Error sharing:', err);
-      });
-    } else {
-      navigator.clipboard.writeText(url);
-      toast({
-        title: "Link Copied!",
-        description: "Event payment link has been copied to clipboard.",
-      });
+    if (typeof navigator !== 'undefined') {
+      if (navigator.share) {
+        navigator.share({
+          title: `Pay for ${eventName}`,
+          text: `Please use this link to pay for ${eventName} via ChanloPay:`,
+          url: url,
+        }).catch(err => {
+          // If share fails (e.g. Permission Denied), fallback to clipboard
+          navigator.clipboard.writeText(url);
+          toast({
+            title: "Link Copied!",
+            description: "Sharing failed, so the link was copied to clipboard instead.",
+          });
+        });
+      } else {
+        navigator.clipboard.writeText(url);
+        toast({
+          title: "Link Copied!",
+          description: "Event payment link has been copied to clipboard.",
+        });
+      }
     }
   };
 
