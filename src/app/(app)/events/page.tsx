@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { Event, Host, Transaction } from '@/lib/types';
+import type { Event, Host } from '@/lib/types';
 import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, Wallet, User as UserIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -151,7 +151,7 @@ export default function EventsPage() {
       .then(() => {
         toast({
           title: "Payment Recorded",
-          description: `Successfully recorded ${amount} from ${guestName}.`,
+          description: `Successfully recorded ₹${amount} from ${guestName}.`,
         });
         setGuestName('');
         setGuestAmount('');
