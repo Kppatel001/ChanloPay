@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -31,15 +32,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info, Wallet, AlertCircle } from 'lucide-react';
+import type { Event, Host, Transaction } from '@/lib/types';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info, Wallet, CheckCircle2, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -49,6 +50,7 @@ export default function EventsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [origin, setOrigin] = useState('');
+  const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -68,6 +70,19 @@ export default function EventsPage() {
   }, [user, firestore]);
   const { data: events, isLoading: eventsLoading } = useCollection<Event>(eventsQuery);
 
+  // Fetch counts for events
+  useEffect(() => {
+    if (!user || !firestore || !events) return;
+
+    events.forEach(async (event) => {
+      if (event.id) {
+        const txnRef = collection(firestore, `hosts/${user.uid}/events/${event.id}/transactions`);
+        const snapshot = await getDocs(txnRef);
+        setEventCounts(prev => ({ ...prev, [event.id!]: snapshot.size }));
+      }
+    });
+  }, [user, firestore, events]);
+
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [newEventName, setNewEventName] = useState('');
   const [newEventLocation, setNewEventLocation] = useState('');
@@ -81,7 +96,7 @@ export default function EventsPage() {
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   
   const handleOpenCreateEventDialog = () => {
-    const isProfileComplete = hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi;
+    const isProfileComplete = !!(hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi);
 
     if (!isProfileComplete) {
         toast({
@@ -167,6 +182,8 @@ export default function EventsPage() {
         setVillageName('');
         setGuestAmount('');
         setGuestType('Gift');
+        // Update local count
+        setEventCounts(prev => ({ ...prev, [eventId]: (prev[eventId] || 0) + 1 }));
       })
       .catch(async () => {
         const permissionError = new FirestorePermissionError({
@@ -207,7 +224,7 @@ export default function EventsPage() {
           title: `Pay for ${eventName}`,
           text: `Please use this link to pay for ${eventName} via ChanloPay:`,
           url: url,
-        }).catch(err => {
+        }).catch(() => {
           navigator.clipboard.writeText(url);
           toast({
             title: "Link Copied!",
@@ -239,7 +256,7 @@ export default function EventsPage() {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Print QR Code - ${eventName}</title>
+          <title>Invitation QR - ${eventName}</title>
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
             body { 
@@ -280,12 +297,12 @@ export default function EventsPage() {
           <div class="container">
             <div class="logo">ChanloPay</div>
             <h1>${eventName}</h1>
-            <p>Direct Digital Payment Portal</p>
+            <p>Scan to Pay Digital Gift</p>
             <img src="${qrCodeUrl}" id="qr-img" />
-            <p class="instruction">Scan with Google Lens or Phone Camera</p>
+            <p class="instruction">Scan with Google Lens or Camera</p>
             <p class="warning">Note: Do NOT scan directly inside GPay/PhonePe</p>
-            <p>Enter details & pay securely</p>
-            <div class="footer">Powered by ChanloPay - Modern Wedding Registry</div>
+            <p>Enter your details & pay securely</p>
+            <div class="footer">Powered by ChanloPay - Secure Wedding Registry</div>
           </div>
           <script>
             const img = document.getElementById('qr-img');
@@ -295,7 +312,7 @@ export default function EventsPage() {
             if (img.complete) triggerPrint();
             else {
               img.onload = triggerPrint;
-              img.onerror = () => alert('Error: Failed to load QR code. Please check your connection.');
+              img.onerror = () => alert('Error: Failed to load QR code.');
             }
           </script>
         </body>
@@ -323,7 +340,7 @@ export default function EventsPage() {
                   <DialogHeader>
                     <DialogTitle>Create New Event</DialogTitle>
                     <DialogDescription>
-                      Fill in the details for your new event. This will generate a scannable QR code for your guests.
+                      Fill in the details for your new event. This generates a <strong>Permanent Master QR</strong> for all your guests.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
@@ -377,11 +394,18 @@ export default function EventsPage() {
                 const guestPayUrl = `${origin}/p/${user?.uid}/${event.id}`;
                 const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(guestPayUrl)}`;
                 const eventDate = new Date(event.eventDate);
+                const count = eventCounts[event.id!] || 0;
 
                 return (
                   <Card key={event.id} className="overflow-hidden flex flex-col shadow-md border-primary/10 hover:border-primary/30 transition-colors">
-                    <CardHeader>
-                      <CardTitle className="truncate text-xl">{event.eventName}</CardTitle>
+                    <CardHeader className="relative">
+                      <div className="absolute top-4 right-4">
+                        <Badge variant="secondary" className="gap-1.5 font-bold">
+                           <Users className="h-3 w-3" />
+                           {count} Records
+                        </Badge>
+                      </div>
+                      <CardTitle className="truncate text-xl pr-20">{event.eventName}</CardTitle>
                       <div className="space-y-1 mt-2">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-4 w-4 text-primary" />
@@ -394,8 +418,8 @@ export default function EventsPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="flex-1 pb-2">
-                      <p className="text-xs text-muted-foreground bg-muted p-2 rounded leading-relaxed">
-                        Guests scan this to enter their name & village before paying securely via any UPI app.
+                      <p className="text-xs text-muted-foreground bg-muted p-2 rounded leading-relaxed border-l-2 border-primary">
+                        <strong>Invitation QR:</strong> Share once. Any number of guests can scan this to pay.
                       </p>
                     </CardContent>
                     <CardFooter className="grid grid-cols-2 gap-4 border-t pt-4 bg-muted/30">
@@ -410,10 +434,10 @@ export default function EventsPage() {
                           <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                               <QrCode className="h-5 w-5 text-primary" />
-                              Event QR Portal
+                              Master Invitation QR
                             </DialogTitle>
                             <DialogDescription>
-                              Digital payment gateway for <strong>{event.eventName}</strong>.
+                              This QR is permanent for <strong>{event.eventName}</strong>. Unlimited guests can scan this.
                             </DialogDescription>
                           </DialogHeader>
                           <div className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-inner mt-4 border">
@@ -427,24 +451,18 @@ export default function EventsPage() {
                             <div className="mt-4 flex flex-col items-center gap-2">
                                 <div className="flex items-center gap-2 text-primary font-bold text-[11px] bg-primary/5 px-3 py-1.5 rounded-full">
                                   <Info className="h-3.5 w-3.5" />
-                                  Scan with Google Lens or Phone Camera
+                                  Scan with Google Lens or Camera
                                 </div>
                                 <p className="text-[10px] text-destructive font-bold text-center">
-                                    Note: Payment apps (GPay/PhonePe) will NOT scan this code directly.
+                                    Note: GPay/PhonePe cannot scan this link directly.
                                 </p>
                             </div>
                             <div className="mt-6 text-center w-full">
-                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-bold">Direct Link</p>
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-bold">Reusable Link</p>
                                 <div className="flex items-center justify-center gap-2 bg-muted/50 p-2 rounded-lg">
-                                  <a 
-                                      href={guestPayUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer" 
-                                      className="text-xs font-mono text-primary flex items-center justify-center gap-1 hover:underline truncate max-w-[200px]"
-                                  >
+                                  <span className="text-xs font-mono text-primary truncate max-w-[200px]">
                                       {guestPayUrl.replace(/^https?:\/\//, '')}
-                                      <ExternalLink className="h-3 w-3 shrink-0" />
-                                  </a>
+                                  </span>
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
@@ -473,7 +491,7 @@ export default function EventsPage() {
                               Manual Record Entry
                             </h4>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                Use this to manually record a cash payment or traditional gift received at the venue.
+                                Manually record cash or traditional gifts received at the venue.
                             </p>
                             <div className="grid gap-3">
                               <div className="grid gap-1">
@@ -547,7 +565,7 @@ export default function EventsPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Event?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This action will permanently delete "{event.eventName}" and all its transaction history.
+                              This action will permanently delete "{event.eventName}" and its {count} transaction records.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
