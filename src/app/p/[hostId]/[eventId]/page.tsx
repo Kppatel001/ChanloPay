@@ -47,6 +47,10 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter your full name.' });
       return;
     }
+    if (!villageName.trim()) {
+      toast({ variant: 'destructive', title: 'Village Required', description: 'Please enter your village name.' });
+      return;
+    }
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       toast({ variant: 'destructive', title: 'Invalid Amount', description: 'Please enter a valid amount greater than 0.' });
@@ -68,13 +72,13 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   };
 
   const handleConfirmPayment = async () => {
-    if (!guestName || !amount) return;
+    if (!guestName || !villageName || !amount) return;
 
     setIsSubmitting(true);
 
     const transactionData = {
       name: guestName.trim(),
-      village: villageName.trim() || 'N/A',
+      village: villageName.trim(),
       email: 'Guest',
       amount: parseFloat(amount),
       transactionDate: new Date().toISOString(),
@@ -213,10 +217,11 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     <Home className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="villageName"
-                      placeholder="Enter your village (optional)"
+                      placeholder="Enter your village name"
                       className="pl-10 font-body h-12"
                       value={villageName}
                       onChange={(e) => setVillageName(e.target.value)}
+                      required
                     />
                   </div>
                 </div>
@@ -326,7 +331,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     onClick={() => setHasSubmitted(false)}
                   >
                     <ArrowLeft className="mr-2 h-3 w-3" />
-                    Change Amount / Name
+                    Change Details
                   </Button>
                 </div>
               </div>
