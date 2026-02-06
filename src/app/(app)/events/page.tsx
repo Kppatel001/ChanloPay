@@ -32,10 +32,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info, Wallet } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info, Wallet, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
@@ -268,6 +269,7 @@ export default function EventsPage() {
             .logo { font-weight: 800; font-size: 24px; color: #9400D3; margin-bottom: 24px; letter-spacing: -0.5px; }
             .instruction { font-weight: bold; color: #9400D3; border-top: 2px solid #f3f4f6; padding-top: 20px; margin-top: 20px; font-size: 20px; }
             .footer { margin-top: 20px; font-size: 14px; color: #9ca3af; }
+            .warning { font-size: 12px; color: #ef4444; margin-top: 10px; font-weight: 500; }
             @media print {
               body { padding: 0; }
               .container { border-width: 2px; box-shadow: none; }
@@ -280,8 +282,9 @@ export default function EventsPage() {
             <h1>${eventName}</h1>
             <p>Direct Digital Payment Portal</p>
             <img src="${qrCodeUrl}" id="qr-img" />
-            <p class="instruction">Scan with Google Lens or QR Scanner</p>
-            <p>Enter details & pay via any UPI app</p>
+            <p class="instruction">Scan with Google Lens or Phone Camera</p>
+            <p class="warning">Note: Do NOT scan directly inside GPay/PhonePe</p>
+            <p>Enter details & pay securely</p>
             <div class="footer">Powered by ChanloPay - Modern Wedding Registry</div>
           </div>
           <script>
@@ -421,9 +424,14 @@ export default function EventsPage() {
                               height={240}
                               className="rounded-lg border-2 border-primary/5 p-2"
                             />
-                            <div className="mt-4 flex items-center gap-2 text-primary font-bold text-xs bg-primary/5 px-3 py-1.5 rounded-full">
-                              <Info className="h-3.5 w-3.5" />
-                              Scan with Google Lens or QR scanner
+                            <div className="mt-4 flex flex-col items-center gap-2">
+                                <div className="flex items-center gap-2 text-primary font-bold text-[11px] bg-primary/5 px-3 py-1.5 rounded-full">
+                                  <Info className="h-3.5 w-3.5" />
+                                  Scan with Google Lens or Phone Camera
+                                </div>
+                                <p className="text-[10px] text-destructive font-bold text-center">
+                                    Note: Payment apps (GPay/PhonePe) will NOT scan this code directly.
+                                </p>
                             </div>
                             <div className="mt-6 text-center w-full">
                                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-bold">Direct Link</p>

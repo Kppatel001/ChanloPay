@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -136,7 +136,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     );
   }
 
-  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&am=${amount}&tn=${encodeURIComponent(eventData.eventName)}`;
+  // Refined UPI URI for better compatibility (ensuring 2 decimal places for amount)
+  const formattedAmount = parseFloat(amount).toFixed(2);
+  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&am=${formattedAmount}&tn=${encodeURIComponent(eventData.eventName)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiUri)}`;
 
   return (
@@ -278,9 +280,17 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               </div>
             </CardContent>
             <CardFooter className="bg-muted/30 pt-6">
-                <p className="text-[11px] text-center w-full text-muted-foreground font-body leading-relaxed">
-                    Please ensure the payment is successful in your UPI app before clicking <strong>"I have Paid"</strong> to ensure your gift is recorded correctly.
-                </p>
+                <div className="space-y-4">
+                    <Alert className="bg-primary/5 border-primary/20">
+                        <Info className="h-4 w-4 text-primary" />
+                        <AlertDescription className="text-[11px] font-medium leading-relaxed">
+                            <strong>Important:</strong> After paying in your bank app, you <strong>MUST</strong> return here and click "I have Paid" to record your name in the history.
+                        </AlertDescription>
+                    </Alert>
+                    <p className="text-[10px] text-center w-full text-muted-foreground font-body">
+                        Powered by ChanloPay - Secure Wedding Registry
+                    </p>
+                </div>
             </CardFooter>
           </Card>
         )}
