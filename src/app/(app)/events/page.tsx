@@ -223,56 +223,83 @@ export default function EventsPage() {
 
   const handlePrint = (qrCodeUrl: string, eventName: string) => {
     const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print QR Code - ${eventName}</title>
-            <style>
-              body { 
-                display: flex; 
-                flex-direction: column; 
-                align-items: center; 
-                justify-content: center; 
-                height: 100vh; 
-                margin: 0; 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                text-align: center;
-              }
-              .container {
-                border: 2px solid #6d28d9;
-                padding: 40px;
-                border-radius: 20px;
-                background: white;
-                max-width: 500px;
-              }
-              img { width: 400px; height: 400px; margin: 20px 0; }
-              h1 { margin: 0; color: #6d28d9; font-size: 32px; }
-              p { font-size: 18px; color: #4b5563; margin: 10px 0; }
-              .logo { font-weight: bold; font-size: 24px; color: #6d28d9; margin-bottom: 20px; }
-              .instruction { font-weight: bold; color: #6d28d9; border-top: 1px solid #e5e7eb; pt-4 mt-4; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="logo">ChanloPay</div>
-              <h1>${eventName}</h1>
-              <p>Scan to Pay via UPI</p>
-              <img src="${qrCodeUrl}" />
-              <p class="instruction">Scan this QR code with Google Lens or any QR scanner</p>
-              <p>Enter your details and pay securely</p>
-            </div>
-            <script>
-              window.onload = () => {
-                window.print();
-                window.close();
-              };
-            </script>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
+    if (!printWindow) {
+      toast({
+        variant: 'destructive',
+        title: 'Pop-up Blocked',
+        description: 'Please allow pop-ups to print the QR code.',
+      });
+      return;
     }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Print QR Code - ${eventName}</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              justify-content: center; 
+              min-height: 100vh; 
+              margin: 0; 
+              padding: 20px;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+              text-align: center;
+              background-color: white;
+            }
+            .container {
+              border: 3px solid #6d28d9;
+              padding: 30px;
+              border-radius: 24px;
+              background: white;
+              max-width: 450px;
+              width: 100%;
+            }
+            img { width: 100%; max-width: 350px; height: auto; margin: 20px 0; display: block; margin-left: auto; margin-right: auto; }
+            h1 { margin: 0; color: #6d28d9; font-size: 28px; line-height: 1.2; }
+            p { font-size: 16px; color: #4b5563; margin: 8px 0; }
+            .logo { font-weight: bold; font-size: 20px; color: #6d28d9; margin-bottom: 20px; }
+            .instruction { font-weight: bold; color: #6d28d9; border-top: 1px solid #e5e7eb; padding-top: 15px; margin-top: 15px; }
+            @media print {
+              body { padding: 0; }
+              .container { border-width: 2px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="logo">ChanloPay</div>
+            <h1>${eventName}</h1>
+            <p>Scan to Pay via UPI</p>
+            <img src="${qrCodeUrl}" id="qr-img" />
+            <p class="instruction">Scan this QR code with Google Lens or any QR scanner</p>
+            <p>Enter your details and pay securely</p>
+          </div>
+          <script>
+            const img = document.getElementById('qr-img');
+            const triggerPrint = () => {
+              window.print();
+              // On some mobile devices, we shouldn't close automatically
+              // as it might cancel the print dialog. 
+            };
+            
+            if (img.complete) {
+              triggerPrint();
+            } else {
+              img.onload = triggerPrint;
+              img.onerror = () => {
+                alert('Error: Failed to load QR code. Please check your connection.');
+              };
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
