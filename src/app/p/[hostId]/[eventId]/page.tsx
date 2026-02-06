@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, use, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight, AlertCircle, Info, Copy, Check } from 'lucide-react';
+import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight, AlertCircle, Info, Copy, Check, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -149,9 +150,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     );
   }
 
-  // Re-optimized UPI URI for maximum compatibility
+  // Simplified UPI URI to bypass strict app security filters
   const formattedAmount = parseFloat(amount).toFixed(2);
-  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent(eventData.eventName)}`;
+  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&am=${formattedAmount}&cu=INR`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiUri)}`;
 
   return (
@@ -246,9 +247,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         ) : (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
             <CardHeader className="text-center">
-              <CardTitle className="font-headline text-xl">Pay for {eventData.eventName}</CardTitle>
+              <CardTitle className="font-headline text-xl">Complete Payment</CardTitle>
               <CardDescription className="font-body">
-                Pay <span className="font-bold text-foreground text-lg">₹{amount}</span> using any UPI app.
+                Amount: <span className="font-bold text-foreground text-lg">₹{amount}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
@@ -261,74 +262,85 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   className="rounded-md"
                 />
               </div>
-              
-              <div className="mt-4 flex flex-col items-center gap-2 w-full">
-                <div className="flex items-center gap-2 bg-muted p-2 rounded-lg w-full justify-between">
-                  <p className="text-xs font-mono font-bold text-primary truncate">
-                    {hostProfile.upi}
-                  </p>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    className="h-8 gap-1 text-xs" 
-                    onClick={handleCopyUpi}
-                  >
-                    {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    {isCopied ? "Copied" : "Copy ID"}
+
+              <div className="mt-6 w-full space-y-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-center uppercase tracking-tight text-muted-foreground">Option 1: Quick Pay</p>
+                  <Button asChild className="w-full font-body font-bold h-14 text-lg bg-primary hover:bg-primary/90">
+                    <a href={upiUri}>
+                      <ExternalLink className="mr-2 h-5 w-5" />
+                      Open UPI App
+                    </a>
                   </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground text-center">
-                  If the payment is declined for security, please <strong>Copy UPI ID</strong> and pay manually in your app.
-                </p>
-              </div>
-              
-              <div className="mt-6 w-full space-y-3">
-                <Button asChild className="w-full font-body font-bold h-14 text-lg">
-                  <a href={upiUri}>
-                    <ExternalLink className="mr-2 h-5 w-5" />
-                    Pay via UPI App
-                  </a>
-                </Button>
 
-                <Button 
-                  className="w-full font-body h-14 text-lg" 
-                  onClick={handleConfirmPayment}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
-                  I have Paid - Save Details
-                </Button>
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground font-bold">Or Manual Pay</span></div>
+                </div>
 
-                <Button 
-                  variant="ghost" 
-                  className="w-full font-body"
-                  onClick={() => setHasSubmitted(false)}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Go Back
-                </Button>
+                <div className="space-y-3">
+                  <Alert variant="default" className="bg-amber-50 border-amber-200">
+                    <ShieldAlert className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800 text-[11px] font-bold">If "Security Error" appears:</AlertTitle>
+                    <AlertDescription className="text-amber-700 text-[10px] leading-tight mt-1">
+                      1. Copy the UPI ID below.<br />
+                      2. Open GPay/PhonePe manually.<br />
+                      3. Paste the ID & Pay ₹{amount}.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="flex items-center gap-2 bg-muted p-3 rounded-lg w-full justify-between border-2 border-dashed border-muted-foreground/20">
+                    <div className="truncate">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Copy UPI ID</p>
+                      <p className="text-xs font-mono font-bold text-primary truncate">
+                        {hostProfile.upi}
+                      </p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="secondary" 
+                      className="h-10 gap-2 font-bold px-4" 
+                      onClick={handleCopyUpi}
+                    >
+                      {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {isCopied ? "Copied" : "Copy"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-3">
+                  <Button 
+                    className="w-full font-body font-bold h-14 text-lg border-2 border-primary text-primary" 
+                    variant="outline"
+                    onClick={handleConfirmPayment}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+                    Confirm & Save Details
+                  </Button>
+
+                  <Button 
+                    variant="ghost" 
+                    className="w-full font-body text-xs"
+                    onClick={() => setHasSubmitted(false)}
+                  >
+                    <ArrowLeft className="mr-2 h-3 w-3" />
+                    Change Amount / Name
+                  </Button>
+                </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted/30 pt-6">
-                <div className="space-y-4 w-full">
-                    <Alert className="bg-primary/5 border-primary/20">
-                        <Info className="h-4 w-4 text-primary" />
-                        <AlertDescription className="text-[11px] font-medium leading-relaxed">
-                            <strong>Note:</strong> Some apps block browser links for security. If the "Pay via UPI App" button fails, copy the UPI ID or scan the QR code.
-                        </AlertDescription>
-                    </Alert>
-                    <p className="text-[10px] text-center w-full text-muted-foreground font-body">
-                        Powered by ChanloPay - Secure Wedding Registry
-                    </p>
-                </div>
+            <CardFooter className="bg-muted/30 pt-4 flex-col gap-2">
+                <p className="text-[10px] text-center w-full text-muted-foreground font-body">
+                    Your details will only be saved after you click <strong>Confirm</strong>.
+                </p>
+                <p className="text-[10px] text-center w-full text-muted-foreground font-bold uppercase tracking-widest">
+                    Secure Wedding Registry
+                </p>
             </CardFooter>
           </Card>
         )}
-        
-        <div className="mt-8 text-muted-foreground text-xs font-body flex items-center gap-1">
-            <span className="opacity-70">Powered by</span>
-            <span className="font-bold text-primary opacity-100">ChanloPay</span>
-        </div>
       </div>
     </div>
   );
