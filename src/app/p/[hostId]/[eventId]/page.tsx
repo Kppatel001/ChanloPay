@@ -8,12 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight } from 'lucide-react';
+import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
   const resolvedParams = use(params);
@@ -40,12 +41,13 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestName || !amount) {
-      toast({
-        variant: 'destructive',
-        title: 'Details Required',
-        description: 'Please enter your full name and the amount.',
-      });
+    if (!guestName.trim()) {
+      toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter your full name.' });
+      return;
+    }
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      toast({ variant: 'destructive', title: 'Invalid Amount', description: 'Please enter a valid amount greater than 0.' });
       return;
     }
     setHasSubmitted(true);
@@ -57,8 +59,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     setIsSubmitting(true);
 
     const transactionData = {
-      name: guestName,
-      village: villageName,
+      name: guestName.trim(),
+      village: villageName.trim() || 'N/A',
       email: 'Guest',
       amount: parseFloat(amount),
       transactionDate: new Date().toISOString(),
@@ -113,6 +115,27 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     );
   }
 
+  // Critical check for host setup
+  const isHostSetup = hostProfile.upi && hostProfile.name;
+
+  if (!isHostSetup) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-background p-4 text-center max-w-md mx-auto">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Host Setup Incomplete</AlertTitle>
+          <AlertDescription>
+            The host has not yet completed their payment setup. Please contact the event host to inform them.
+          </AlertDescription>
+        </Alert>
+        <div className="mt-8 flex items-center gap-2 text-primary opacity-50">
+          <Logo className="h-6 w-6" />
+          <span className="font-headline text-lg font-bold">ChanloPay</span>
+        </div>
+      </div>
+    );
+  }
+
   const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&cu=INR&am=${amount}&tn=${encodeURIComponent(eventData.eventName)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiUri)}`;
 
@@ -161,7 +184,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     <Input
                       id="guestName"
                       placeholder="Enter your full name"
-                      className="pl-10 font-body"
+                      className="pl-10 font-body h-12"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
                       required
@@ -174,22 +197,22 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     <Home className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="villageName"
-                      placeholder="Enter your village"
-                      className="pl-10 font-body"
+                      placeholder="Enter your village (optional)"
+                      className="pl-10 font-body h-12"
                       value={villageName}
                       onChange={(e) => setVillageName(e.target.value)}
                     />
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="amount" className="font-body">Amount to Pay</Label>
+                  <Label htmlFor="amount" className="font-body">Amount to Pay (₹)</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">₹</span>
+                    <span className="absolute left-3 top-3.5 text-muted-foreground text-sm font-medium">₹</span>
                     <Input
                       id="amount"
                       type="number"
                       placeholder="Enter amount"
-                      className="pl-8 font-body text-lg"
+                      className="pl-8 font-body text-xl h-14 font-bold"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       required
@@ -210,7 +233,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <CardHeader className="text-center">
               <CardTitle className="font-headline text-xl">Pay for {eventData.eventName}</CardTitle>
               <CardDescription className="font-body">
-                Scan with any UPI app to pay <span className="font-bold text-foreground">₹{amount}</span>.
+                Scan with any UPI app to pay <span className="font-bold text-foreground text-lg">₹{amount}</span>.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
@@ -228,7 +251,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               </p>
               
               <div className="mt-6 w-full space-y-3">
-                <Button asChild className="w-full font-body font-bold h-12 text-lg">
+                <Button asChild className="w-full font-body font-bold h-14 text-lg">
                   <a href={upiUri}>
                     <ExternalLink className="mr-2 h-5 w-5" />
                     Pay via UPI App
@@ -236,7 +259,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 </Button>
 
                 <Button 
-                  className="w-full font-body h-12 text-lg" 
+                  className="w-full font-body h-14 text-lg" 
                   onClick={handleConfirmPayment}
                   disabled={isSubmitting}
                 >
@@ -255,8 +278,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               </div>
             </CardContent>
             <CardFooter className="bg-muted/30 pt-6">
-                <p className="text-[10px] text-center w-full text-muted-foreground font-body">
-                    Please ensure the payment is successful in your UPI app before clicking "I have Paid".
+                <p className="text-[11px] text-center w-full text-muted-foreground font-body leading-relaxed">
+                    Please ensure the payment is successful in your UPI app before clicking <strong>"I have Paid"</strong> to ensure your gift is recorded correctly.
                 </p>
             </CardFooter>
           </Card>

@@ -8,12 +8,14 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { OverviewChart } from '@/components/dashboard/overview-chart';
 import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import type { Event, Transaction } from '@/lib/types';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as ChartTooltip } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -31,7 +33,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!firestore || !user || areEventsLoading) {
-      if (!areEventsLoading) {
+      if (!areEventsLoading && (!events || events.length === 0)) {
         setTransactionsLoading(false);
       }
       return;
@@ -95,6 +97,7 @@ export default function DashboardPage() {
 
   const eventsCount = events?.length ?? 0;
 
+  // Overview Chart Data (Revenue by Month)
   const monthlyRevenue = transactions.reduce((acc, transaction) => {
     if (transaction.status === 'Success') {
       const month = transaction.date.toLocaleString('default', { month: 'short' });
@@ -108,6 +111,22 @@ export default function DashboardPage() {
   
   const chartData = Object.values(monthlyRevenue);
 
+  // Gift Type Breakdown Data
+  const giftTypeBreakdown = transactions.reduce((acc, t) => {
+    if (t.status === 'Success') {
+      const type = t.type || 'Gift';
+      acc[type] = (acc[type] || 0) + t.amount;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const pieChartData = Object.entries(giftTypeBreakdown).map(([name, value]) => ({
+    name,
+    value,
+  }));
+
+  const COLORS = ['#9400D3', '#D30028', '#E6E0EB', '#4b5563'];
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header pageTitle="Dashboard" />
@@ -118,21 +137,60 @@ export default function DashboardPage() {
           eventsCount={eventsCount}
           isLoading={isLoading}
         />
+        
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card className="lg:col-span-4">
             <CardHeader>
-              <CardTitle>Overview</CardTitle>
+              <CardTitle>Revenue Overview</CardTitle>
+              <CardDescription>Monthly growth of wedding contributions.</CardDescription>
             </CardHeader>
             <CardContent>
               <OverviewChart data={chartData} isLoading={isLoading} />
             </CardContent>
           </Card>
-          <div className="lg:col-span-3">
-            <RecentTransactions
-              transactions={transactions}
-              isLoading={isLoading}
-            />
-          </div>
+          
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Contribution Breakdown</CardTitle>
+              <CardDescription>Revenue by gift type category.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              {isLoading ? (
+                <div className="flex h-full items-center justify-center">Loading...</div>
+              ) : pieChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip 
+                      formatter={(value) => `₹${value}`}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                  No breakdown data available.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
+          <RecentTransactions
+            transactions={transactions}
+            isLoading={isLoading}
+          />
         </div>
       </main>
     </div>

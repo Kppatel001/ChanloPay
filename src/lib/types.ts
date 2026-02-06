@@ -11,6 +11,8 @@ export type Transaction = {
   type: 'Gift' | 'Donation' | 'Service';
   eventName?: string;
   eventId?: string;
+  paymentMethod?: string;
+  receiptQrCode?: string;
 };
 
 export type Event = {
@@ -29,4 +31,6 @@ export type Host = {
   name?: string;
   mobile?: string;
   upi?: string;
+  registrationDate?: string;
+  kycVerified?: boolean;
 };

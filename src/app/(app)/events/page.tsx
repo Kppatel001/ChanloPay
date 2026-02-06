@@ -32,9 +32,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info, Wallet } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
@@ -75,6 +76,7 @@ export default function EventsPage() {
   const [guestName, setGuestName] = useState('');
   const [villageName, setVillageName] = useState('');
   const [guestAmount, setGuestAmount] = useState('');
+  const [guestType, setGuestType] = useState('Gift');
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   
   const handleOpenCreateEventDialog = () => {
@@ -98,9 +100,9 @@ export default function EventsPage() {
 
     const newEvent: Omit<Event, 'id'> = {
       hostId: user.uid,
-      eventName: newEventName,
+      eventName: newEventName.trim(),
       eventDate: new Date().toISOString(),
-      location: newEventLocation,
+      location: newEventLocation.trim(),
       qrCode: 'GUEST_PAYMENT_URL',
       createdAt: serverTimestamp(),
     };
@@ -127,7 +129,7 @@ export default function EventsPage() {
   };
 
   const handleRecordTransaction = async (eventId: string) => {
-    if (!guestName || !guestAmount || !user || !firestore || !eventId) {
+    if (!guestName.trim() || !guestAmount || !user || !firestore || !eventId) {
       toast({
         variant: 'destructive',
         title: 'Missing Details',
@@ -140,14 +142,14 @@ export default function EventsPage() {
 
     const amount = parseFloat(guestAmount);
     const transactionData = {
-      name: guestName,
-      village: villageName,
+      name: guestName.trim(),
+      village: villageName.trim() || 'N/A',
       email: 'Manual Entry',
       amount: amount,
       transactionDate: new Date().toISOString(),
       status: 'Success',
-      type: 'Gift',
-      paymentMethod: 'UPI',
+      type: guestType,
+      paymentMethod: 'Cash',
       receiptQrCode: `manual_txn_${Date.now()}`,
       eventId: eventId,
     };
@@ -163,6 +165,7 @@ export default function EventsPage() {
         setGuestName('');
         setVillageName('');
         setGuestAmount('');
+        setGuestType('Gift');
       })
       .catch(async () => {
         const permissionError = new FirestorePermissionError({
@@ -204,11 +207,10 @@ export default function EventsPage() {
           text: `Please use this link to pay for ${eventName} via ChanloPay:`,
           url: url,
         }).catch(err => {
-          // If share fails (e.g. Permission Denied), fallback to clipboard
           navigator.clipboard.writeText(url);
           toast({
             title: "Link Copied!",
-            description: "Sharing failed, so the link was copied to clipboard instead.",
+            description: "Link copied to clipboard.",
           });
         });
       } else {
@@ -252,21 +254,23 @@ export default function EventsPage() {
               background-color: white;
             }
             .container {
-              border: 3px solid #6d28d9;
-              padding: 30px;
-              border-radius: 24px;
+              border: 3px solid #9400D3;
+              padding: 40px;
+              border-radius: 32px;
               background: white;
-              max-width: 450px;
+              max-width: 500px;
               width: 100%;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             }
-            img { width: 100%; max-width: 350px; height: auto; margin: 20px 0; display: block; margin-left: auto; margin-right: auto; }
-            h1 { margin: 0; color: #6d28d9; font-size: 28px; line-height: 1.2; }
-            p { font-size: 16px; color: #4b5563; margin: 8px 0; }
-            .logo { font-weight: bold; font-size: 20px; color: #6d28d9; margin-bottom: 20px; }
-            .instruction { font-weight: bold; color: #6d28d9; border-top: 1px solid #e5e7eb; padding-top: 15px; margin-top: 15px; }
+            img { width: 100%; max-width: 350px; height: auto; margin: 30px auto; display: block; border: 1px solid #eee; padding: 10px; border-radius: 12px; }
+            h1 { margin: 0; color: #9400D3; font-size: 32px; font-weight: 800; line-height: 1.2; }
+            p { font-size: 18px; color: #4b5563; margin: 10px 0; }
+            .logo { font-weight: 800; font-size: 24px; color: #9400D3; margin-bottom: 24px; letter-spacing: -0.5px; }
+            .instruction { font-weight: bold; color: #9400D3; border-top: 2px solid #f3f4f6; padding-top: 20px; margin-top: 20px; font-size: 20px; }
+            .footer { margin-top: 20px; font-size: 14px; color: #9ca3af; }
             @media print {
               body { padding: 0; }
-              .container { border-width: 2px; }
+              .container { border-width: 2px; box-shadow: none; }
             }
           </style>
         </head>
@@ -274,26 +278,21 @@ export default function EventsPage() {
           <div class="container">
             <div class="logo">ChanloPay</div>
             <h1>${eventName}</h1>
-            <p>Scan to Pay via UPI</p>
+            <p>Direct Digital Payment Portal</p>
             <img src="${qrCodeUrl}" id="qr-img" />
-            <p class="instruction">Scan this QR code with Google Lens or any QR scanner</p>
-            <p>Enter your details and pay securely</p>
+            <p class="instruction">Scan with Google Lens or QR Scanner</p>
+            <p>Enter details & pay via any UPI app</p>
+            <div class="footer">Powered by ChanloPay - Modern Wedding Registry</div>
           </div>
           <script>
             const img = document.getElementById('qr-img');
             const triggerPrint = () => {
               window.print();
-              // On some mobile devices, we shouldn't close automatically
-              // as it might cancel the print dialog. 
             };
-            
-            if (img.complete) {
-              triggerPrint();
-            } else {
+            if (img.complete) triggerPrint();
+            else {
               img.onload = triggerPrint;
-              img.onerror = () => {
-                alert('Error: Failed to load QR code. Please check your connection.');
-              };
+              img.onerror = () => alert('Error: Failed to load QR code. Please check your connection.');
             }
           </script>
         </body>
@@ -362,9 +361,11 @@ export default function EventsPage() {
             {eventsLoading && <div className="mt-4 text-center">Loading events...</div>}
 
             {!eventsLoading && (!events || events.length === 0) && (
-              <div className="mt-4 text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-                <p className="mb-2">No events created yet.</p>
-                <Button variant="link" onClick={handleOpenCreateEventDialog}>Create your first event</Button>
+              <div className="mt-4 text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg bg-muted/20">
+                <QrCode className="mx-auto h-12 w-12 opacity-20 mb-4" />
+                <p className="mb-2 font-medium">No events created yet.</p>
+                <p className="text-xs mb-4">Complete your profile to start creating events.</p>
+                <Button variant="outline" onClick={handleOpenCreateEventDialog}>Create your first event</Button>
               </div>
             )}
 
@@ -375,23 +376,23 @@ export default function EventsPage() {
                 const eventDate = new Date(event.eventDate);
 
                 return (
-                  <Card key={event.id} className="overflow-hidden flex flex-col shadow-md">
+                  <Card key={event.id} className="overflow-hidden flex flex-col shadow-md border-primary/10 hover:border-primary/30 transition-colors">
                     <CardHeader>
-                      <CardTitle className="truncate">{event.eventName}</CardTitle>
-                      <div className="space-y-1">
+                      <CardTitle className="truncate text-xl">{event.eventName}</CardTitle>
+                      <div className="space-y-1 mt-2">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
+                          <Calendar className="h-4 w-4 text-primary" />
                           <span>{eventDate.toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
+                          <MapPin className="h-4 w-4 text-primary" />
                           <span className="truncate">{event.location}</span>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex-1">
-                      <p className="text-sm text-muted-foreground">
-                        Guests scan this to enter their details before paying via UPI.
+                    <CardContent className="flex-1 pb-2">
+                      <p className="text-xs text-muted-foreground bg-muted p-2 rounded leading-relaxed">
+                        Guests scan this to enter their name & village before paying securely via any UPI app.
                       </p>
                     </CardContent>
                     <CardFooter className="grid grid-cols-2 gap-4 border-t pt-4 bg-muted/30">
@@ -405,28 +406,28 @@ export default function EventsPage() {
                         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
-                              <QrCode className="h-5 w-5" />
-                              Scan to Pay
+                              <QrCode className="h-5 w-5 text-primary" />
+                              Event QR Portal
                             </DialogTitle>
                             <DialogDescription>
-                              Guests scan this to enter their name and village before paying for <strong>{event.eventName}</strong>.
+                              Digital payment gateway for <strong>{event.eventName}</strong>.
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-inner mt-4">
+                          <div className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-inner mt-4 border">
                             <Image
                               src={qrCodeUrl}
                               alt={`QR Code for ${event.eventName}`}
-                              width={220}
-                              height={220}
-                              className="rounded-md border p-3"
+                              width={240}
+                              height={240}
+                              className="rounded-lg border-2 border-primary/5 p-2"
                             />
-                            <div className="mt-3 flex items-center gap-1 text-primary font-bold text-xs">
-                              <Info className="h-3 w-3" />
-                              Scan this QR code with Google Lens or any QR scanner
+                            <div className="mt-4 flex items-center gap-2 text-primary font-bold text-xs bg-primary/5 px-3 py-1.5 rounded-full">
+                              <Info className="h-3.5 w-3.5" />
+                              Scan with Google Lens or QR scanner
                             </div>
-                            <div className="mt-4 text-center w-full">
-                                <p className="text-xs text-muted-foreground mb-2">Direct Payment URL:</p>
-                                <div className="flex items-center justify-center gap-2">
+                            <div className="mt-6 text-center w-full">
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-bold">Direct Link</p>
+                                <div className="flex items-center justify-center gap-2 bg-muted/50 p-2 rounded-lg">
                                   <a 
                                       href={guestPayUrl} 
                                       target="_blank" 
@@ -439,82 +440,89 @@ export default function EventsPage() {
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="h-8 w-8"
+                                    className="h-8 w-8 text-primary hover:bg-primary/10"
                                     onClick={() => handleShareLink(guestPayUrl, event.eventName)}
                                   >
-                                    <Share2 className="h-4 w-4 text-primary" />
+                                    <Share2 className="h-4 w-4" />
                                   </Button>
                                 </div>
                             </div>
                             <div className="mt-4 w-full">
                               <Button 
-                                className="w-full"
+                                className="w-full font-bold"
                                 variant="outline"
                                 onClick={() => handlePrint(qrCodeUrl, event.eventName)}
                               >
                                 <Printer className="mr-2 h-4 w-4" />
-                                Print QR Code
+                                Print Invitation QR
                               </Button>
                             </div>
                           </div>
                           
                           <div className="mt-6 space-y-4 border-t pt-4">
-                            <h4 className="font-semibold text-sm flex items-center gap-2">
+                            <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
                               <UserIcon className="h-4 w-4" />
-                              Manual Guest Entry
+                              Manual Record Entry
                             </h4>
-                            <p className="text-xs text-muted-foreground">
-                                Use this if you want to record a payment manually on behalf of a guest.
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Use this to manually record a cash payment or traditional gift received at the venue.
                             </p>
                             <div className="grid gap-3">
                               <div className="grid gap-1">
                                 <Label htmlFor="guest-name" className="text-xs">Guest Full Name</Label>
-                                <div className="relative">
-                                  <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                  <Input 
-                                    id="guest-name" 
-                                    placeholder="Enter full name" 
-                                    className="pl-9"
-                                    value={guestName}
-                                    onChange={(e) => setGuestName(e.target.value)}
-                                  />
-                                </div>
+                                <Input 
+                                  id="guest-name" 
+                                  placeholder="e.g. Rahul Sharma" 
+                                  className="h-9 text-sm"
+                                  value={guestName}
+                                  onChange={(e) => setGuestName(e.target.value)}
+                                />
                               </div>
                               <div className="grid gap-1">
                                 <Label htmlFor="village-name" className="text-xs">Village Name</Label>
-                                <div className="relative">
-                                  <Home className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                  <Input 
-                                    id="village-name" 
-                                    placeholder="Enter village" 
-                                    className="pl-9"
-                                    value={villageName}
-                                    onChange={(e) => setVillageName(e.target.value)}
-                                  />
-                                </div>
+                                <Input 
+                                  id="village-name" 
+                                  placeholder="e.g. Chandpur" 
+                                  className="h-9 text-sm"
+                                  value={villageName}
+                                  onChange={(e) => setVillageName(e.target.value)}
+                                />
                               </div>
-                              <div className="grid gap-1">
-                                <Label htmlFor="guest-amount" className="text-xs">Amount Received</Label>
-                                <div className="relative">
-                                  <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">₹</span>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="grid gap-1">
+                                  <Label htmlFor="guest-amount" className="text-xs">Amount (₹)</Label>
                                   <Input 
                                     id="guest-amount" 
                                     type="number" 
-                                    placeholder="Enter amount" 
-                                    className="pl-7"
+                                    placeholder="501" 
+                                    className="h-9 text-sm"
                                     value={guestAmount}
                                     onChange={(e) => setGuestAmount(e.target.value)}
                                   />
                                 </div>
+                                <div className="grid gap-1">
+                                  <Label htmlFor="guest-type" className="text-xs">Category</Label>
+                                  <Select value={guestType} onValueChange={setGuestType}>
+                                    <SelectTrigger id="guest-type" className="h-9 text-sm">
+                                      <SelectValue placeholder="Gift" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Gift">Gift</SelectItem>
+                                      <SelectItem value="Donation">Donation</SelectItem>
+                                      <SelectItem value="Service">Service</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                               <Button 
-                                className="w-full mt-2" 
+                                className="w-full mt-2 font-bold" 
                                 size="sm"
                                 disabled={isRecordingTransaction}
                                 onClick={() => handleRecordTransaction(event.id!)}
                               >
                                 {isRecordingTransaction && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Record Payment
+                                <Wallet className="mr-2 h-4 w-4" />
+                                Record Entry
                               </Button>
                             </div>
                           </div>
@@ -537,7 +545,7 @@ export default function EventsPage() {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction onClick={() => handleDeleteEvent(event.id!)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              Delete
+                              Delete Permanently
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
