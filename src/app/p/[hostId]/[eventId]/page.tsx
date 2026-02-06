@@ -252,19 +252,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center p-6">
-              <div className="bg-white p-4 rounded-xl border-2 border-primary/10 shadow-inner mb-6">
-                <Image
-                  src={qrCodeUrl}
-                  alt="Payment QR Code"
-                  width={200}
-                  height={200}
-                  className="rounded-md"
-                />
-                <div className="mt-2 text-[10px] text-center text-primary font-bold">
-                    Scan with Google Lens or any QR app
-                </div>
-              </div>
-
+              
               <div className="w-full space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -279,33 +267,17 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   </Button>
                 </div>
 
-                <div className="space-y-3 border-t pt-4">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">2</div>
-                    <p className="text-xs font-bold uppercase tracking-tight text-muted-foreground">After Paying, click below</p>
-                  </div>
-                  <Button 
-                    className="w-full font-body font-bold h-14 text-lg border-2 border-primary text-primary bg-primary/5 hover:bg-primary/10" 
-                    variant="outline"
-                    onClick={handleConfirmPayment}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
-                    Confirm & Save Details
-                  </Button>
-                </div>
-
                 <div className="border-t-2 border-dashed border-muted-foreground/20 pt-4">
                   <div className="flex items-center gap-2 mb-3 text-amber-600">
                     <ShieldAlert className="h-4 w-4" />
-                    <p className="text-[11px] font-bold uppercase">Payment app not opening?</p>
+                    <p className="text-[11px] font-bold uppercase">Payment Declined? (Security Error)</p>
                   </div>
                   
                   <Alert variant="default" className="bg-amber-50 border-amber-200 mb-4">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="text-amber-800 text-xs font-bold italic">Bypass Security Blocks:</AlertTitle>
+                    <AlertTitle className="text-amber-800 text-xs font-bold italic">Bypass Bank Security Blocks:</AlertTitle>
                     <AlertDescription className="text-amber-700 text-[10px] leading-tight mt-1">
-                      If your payment app doesn't open or shows an error, please <strong>Copy the ID below</strong> and pay manually in your app.
+                      If GPay/PhonePe says <strong>"Declined for Security Reasons"</strong>, please <strong>Copy the ID below</strong> and pay manually in your app (New Payment &gt; UPI ID).
                     </AlertDescription>
                   </Alert>
 
@@ -319,13 +291,43 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     <Button 
                       size="sm" 
                       variant="secondary" 
-                      className="h-10 gap-2 font-bold px-4" 
+                      className="h-10 gap-2 font-bold px-4 shadow-sm" 
                       onClick={handleCopyUpi}
                     >
                       {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {isCopied ? "Copied" : "Copy"}
+                      {isCopied ? "Copied" : "Copy ID"}
                     </Button>
                   </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center py-4">
+                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-bold">Or Scan to Pay</p>
+                   <div className="bg-white p-3 rounded-xl border-2 border-primary/10 shadow-inner">
+                    <Image
+                      src={qrCodeUrl}
+                      alt="Payment QR Code"
+                      width={160}
+                      height={160}
+                      className="rounded-md"
+                    />
+                  </div>
+                  <p className="mt-2 text-[9px] text-primary font-bold">Scan with Google Lens or any Camera</p>
+                </div>
+
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">2</div>
+                    <p className="text-xs font-bold uppercase tracking-tight text-muted-foreground">After Paying, click below</p>
+                  </div>
+                  <Button 
+                    className="w-full font-body font-bold h-14 text-lg border-2 border-primary text-primary bg-primary/5 hover:bg-primary/10" 
+                    variant="outline"
+                    onClick={handleConfirmPayment}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+                    Confirm & Save Record
+                  </Button>
                 </div>
 
                 <div className="pt-2">
@@ -335,7 +337,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     onClick={() => setHasSubmitted(false)}
                   >
                     <ArrowLeft className="mr-2 h-3 w-3" />
-                    Edit my Name / Village
+                    Go back
                   </Button>
                 </div>
               </div>
