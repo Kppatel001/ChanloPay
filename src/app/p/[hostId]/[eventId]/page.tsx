@@ -66,7 +66,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       setTimeout(() => setIsCopied(false), 2000);
       toast({
         title: "UPI ID Copied",
-        description: "Paste it in your payment app (GPay/PhonePe) to pay manually.",
+        description: "Paste it in your payment app to bypass security blocks.",
       });
     }
   };
@@ -150,7 +150,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   }
 
   const formattedAmount = parseFloat(amount).toFixed(2);
-  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&am=${formattedAmount}&cu=INR`;
+  // Using a cleaner UPI URI structure which is more compatible with modern GPay/PhonePe versions
+  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent('Wedding Gift')}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiUri)}`;
 
   return (
@@ -173,10 +174,10 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
-              <p className="text-sm text-center text-muted-foreground">
-                The host has been notified. You can safely close this window.
+              <p className="text-sm text-center text-muted-foreground leading-relaxed">
+                The host has been notified of your contribution. You can safely close this window.
               </p>
-              <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
+              <Button variant="outline" className="w-full font-bold" onClick={() => window.location.reload()}>
                 Make Another Payment
               </Button>
             </CardContent>
@@ -192,13 +193,13 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <form onSubmit={handleNext}>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="guestName" className="font-body">Full Name</Label>
+                  <Label htmlFor="guestName" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Full Name</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <User className="absolute left-3 top-3 h-4 w-4 text-primary" />
                     <Input
                       id="guestName"
                       placeholder="Enter your full name"
-                      className="pl-10 font-body h-12"
+                      className="pl-10 font-body h-12 border-primary/20 focus:border-primary"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
                       required
@@ -206,13 +207,13 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="villageName" className="font-body">Village Name</Label>
+                  <Label htmlFor="villageName" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Village Name</Label>
                   <div className="relative">
-                    <Home className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Home className="absolute left-3 top-3 h-4 w-4 text-primary" />
                     <Input
                       id="villageName"
                       placeholder="Enter your village name"
-                      className="pl-10 font-body h-12"
+                      className="pl-10 font-body h-12 border-primary/20 focus:border-primary"
                       value={villageName}
                       onChange={(e) => setVillageName(e.target.value)}
                       required
@@ -220,14 +221,14 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="amount" className="font-body">Amount to Pay (₹)</Label>
+                  <Label htmlFor="amount" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Amount to Pay (₹)</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-3.5 text-muted-foreground text-sm font-medium">₹</span>
+                    <span className="absolute left-4 top-3.5 text-primary text-lg font-bold">₹</span>
                     <Input
                       id="amount"
                       type="number"
                       placeholder="Enter amount"
-                      className="pl-8 font-body text-xl h-14 font-bold"
+                      className="pl-10 font-body text-2xl h-16 font-bold border-primary/30 focus:border-primary bg-primary/5"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       required
@@ -236,9 +237,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 </div>
               </CardContent>
               <CardFooter>
-                  <Button type="submit" className="w-full font-body font-bold h-12 text-lg shadow-md hover:shadow-lg transition-all">
+                  <Button type="submit" className="w-full font-body font-bold h-14 text-xl shadow-md hover:shadow-lg transition-all group">
                     Next
-                    <ChevronRight className="ml-1 h-5 w-5" />
+                    <ChevronRight className="ml-1 h-6 w-6 group-hover:translate-x-1 transition-transform" />
                   </Button>
               </CardFooter>
             </form>
@@ -256,88 +257,87 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               <div className="w-full space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <div className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">1</div>
-                    <p className="text-xs font-bold uppercase tracking-tight text-muted-foreground">Click to Pay</p>
+                    <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">1</div>
+                    <p className="text-sm font-bold uppercase tracking-tight text-primary">Click to Open UPI App</p>
                   </div>
-                  <Button asChild className="w-full font-body font-bold h-14 text-lg shadow-lg">
+                  <Button asChild className="w-full font-body font-bold h-16 text-xl shadow-lg bg-primary hover:bg-primary/90">
                     <a href={upiUri}>
-                      <ExternalLink className="mr-2 h-5 w-5" />
+                      <ExternalLink className="mr-2 h-6 w-6" />
                       Open GPay / PhonePe
                     </a>
                   </Button>
                 </div>
 
-                <div className="border-t-2 border-dashed border-muted-foreground/20 pt-4">
-                  <div className="flex items-center gap-2 mb-3 text-amber-600">
-                    <ShieldAlert className="h-4 w-4" />
-                    <p className="text-[11px] font-bold uppercase">Payment Declined? (Security Error)</p>
+                <div className="border-t-2 border-dashed border-muted-foreground/20 pt-6">
+                  <div className="flex items-center gap-2 mb-4 text-amber-600">
+                    <ShieldAlert className="h-5 w-5" />
+                    <p className="text-xs font-bold uppercase">Payment Declined? (Bank Block)</p>
                   </div>
                   
-                  <Alert variant="default" className="bg-amber-50 border-amber-200 mb-4">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="text-amber-800 text-xs font-bold italic">Bypass Bank Security Blocks:</AlertTitle>
-                    <AlertDescription className="text-amber-700 text-[10px] leading-tight mt-1">
-                      If GPay/PhonePe says <strong>"Declined for Security Reasons"</strong>, please <strong>Copy the ID below</strong> and pay manually in your app (New Payment &gt; UPI ID).
+                  <Alert variant="default" className="bg-amber-50 border-amber-200 mb-6 py-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    <AlertTitle className="text-amber-900 text-sm font-bold italic">NPCI Security Bypass:</AlertTitle>
+                    <AlertDescription className="text-amber-800 text-[11px] leading-relaxed mt-1 font-medium">
+                      If your app says <strong>"Declined for Security Reasons"</strong>, please <strong>Copy the ID below</strong> and pay manually in your app (New Payment &gt; UPI ID).
                     </AlertDescription>
                   </Alert>
 
-                  <div className="flex items-center gap-2 bg-muted p-3 rounded-lg w-full justify-between border">
-                    <div className="truncate">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Host UPI ID</p>
-                      <p className="text-sm font-mono font-bold text-primary truncate">
+                  <div className="flex items-center gap-3 bg-white p-4 rounded-xl w-full justify-between border-2 border-amber-100 shadow-sm">
+                    <div className="truncate flex-1">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Host UPI ID</p>
+                      <p className="text-base font-mono font-bold text-primary truncate tracking-tight">
                         {hostProfile.upi}
                       </p>
                     </div>
                     <Button 
                       size="sm" 
-                      variant="secondary" 
-                      className="h-10 gap-2 font-bold px-4 shadow-sm" 
+                      className="h-12 gap-2 font-bold px-5 shadow-md shrink-0" 
                       onClick={handleCopyUpi}
                     >
-                      {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {isCopied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                       {isCopied ? "Copied" : "Copy ID"}
                     </Button>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-4">
-                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-bold">Or Scan to Pay</p>
-                   <div className="bg-white p-3 rounded-xl border-2 border-primary/10 shadow-inner">
+                <div className="flex flex-col items-center justify-center py-6 border-t border-muted-foreground/10">
+                   <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-4 font-bold">Alternative: Scan to Pay</p>
+                   <div className="bg-white p-4 rounded-2xl border-2 border-primary/10 shadow-inner">
                     <Image
                       src={qrCodeUrl}
                       alt="Payment QR Code"
-                      width={160}
-                      height={160}
-                      className="rounded-md"
+                      width={180}
+                      height={180}
+                      className="rounded-lg"
                     />
                   </div>
-                  <p className="mt-2 text-[9px] text-primary font-bold">Scan with Google Lens or any Camera</p>
+                  <p className="mt-3 text-[10px] text-primary font-bold bg-primary/5 px-3 py-1 rounded-full">Scan with Google Lens or any Camera</p>
                 </div>
 
-                <div className="space-y-3 border-t pt-4">
+                <div className="space-y-4 border-t pt-6">
                   <div className="flex items-center gap-2">
-                    <div className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">2</div>
-                    <p className="text-xs font-bold uppercase tracking-tight text-muted-foreground">After Paying, click below</p>
+                    <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">2</div>
+                    <p className="text-sm font-bold uppercase tracking-tight text-primary">After Paying, Save your record</p>
                   </div>
                   <Button 
-                    className="w-full font-body font-bold h-14 text-lg border-2 border-primary text-primary bg-primary/5 hover:bg-primary/10" 
+                    className="w-full font-body font-bold h-16 text-xl border-2 border-primary text-primary bg-primary/5 hover:bg-primary/10" 
                     variant="outline"
                     onClick={handleConfirmPayment}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
-                    Confirm & Save Record
+                    {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CheckCircle2 className="mr-2 h-6 w-6" />}
+                    Confirm & Save Entry
                   </Button>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-4 text-center">
                   <Button 
                     variant="ghost" 
-                    className="w-full font-body text-xs text-muted-foreground"
+                    className="font-body text-xs text-muted-foreground hover:text-primary"
                     onClick={() => setHasSubmitted(false)}
                   >
                     <ArrowLeft className="mr-2 h-3 w-3" />
-                    Go back
+                    Go back to Edit Details
                   </Button>
                 </div>
               </div>
