@@ -150,7 +150,6 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   }
 
   const formattedAmount = parseFloat(amount).toFixed(2);
-  // Using a cleaner UPI URI structure which is more compatible with modern GPay/PhonePe versions
   const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent('Wedding Gift')}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiUri)}`;
 
@@ -298,6 +297,22 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                       {isCopied ? "Copied" : "Copy ID"}
                     </Button>
                   </div>
+
+                  <div className="mt-6 p-4 bg-muted/30 rounded-lg text-[10px] text-muted-foreground leading-relaxed space-y-2">
+                    <p className="font-bold text-primary uppercase flex items-center gap-1">
+                      <Info className="h-3 w-3" />
+                      Why does this happen?
+                    </p>
+                    <p>
+                      This error happens because the UPI system or bank has blocked the transaction for security reasons, usually due to paying via a browser link instead of a direct QR or UPI ID.
+                    </p>
+                    <p>
+                      <strong>How to fix:</strong> 1. Copy the UPI ID above. 2. Open GPay/PhonePe manually. 3. Select 'Pay to UPI ID'. 4. Paste and Pay.
+                    </p>
+                    <p className="italic border-t pt-2">
+                      If it still fails, ensure your bank-registered SIM is active, disable VPN, and wait 5-10 minutes before retrying. Only your bank can remove this security block.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex flex-col items-center justify-center py-6 border-t border-muted-foreground/10">
@@ -311,7 +326,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                       className="rounded-lg"
                     />
                   </div>
-                  <p className="mt-3 text-[10px] text-primary font-bold bg-primary/5 px-3 py-1 rounded-full">Scan with Google Lens or any Camera</p>
+                  <p className="mt-3 text-[10px] text-primary font-bold bg-primary/5 px-3 py-1 rounded-full">Scan with Google scanner or Camera</p>
                 </div>
 
                 <div className="space-y-4 border-t pt-6">
