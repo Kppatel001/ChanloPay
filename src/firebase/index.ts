@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -33,10 +33,22 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  let firestore;
+  try {
+    // Use initializeFirestore to set experimental settings like long polling
+    // which improves connectivity in restricted network environments (e.g. Cloud Workstations).
+    firestore = initializeFirestore(firebaseApp, {
+      experimentalForceLongPolling: true,
+    });
+  } catch (e) {
+    // If Firestore is already initialized, fallback to getFirestore
+    firestore = getFirestore(firebaseApp);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore
   };
 }
 
