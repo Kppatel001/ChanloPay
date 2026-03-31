@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -11,24 +10,32 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == hostId;
     }
 
+    // PRODUCTION SECURITY: Request Validation Helpers
+    function isValidTransaction() {
+      let data = request.resource.data;
+      return data.amount > 0 
+          && data.name.size() >= 2
+          && data.village.size() >= 2
+          && data.status == 'Success';
+    }
+
     /**
      * Controls access to individual Host profiles and all nested data.
-     * Hierarchy: /hosts/{hostId}/events/{eventId}/transactions/{transactionId}
      */
     match /hosts/{hostId} {
-      // Allow read for anyone to fetch host's UPI details for payment
+      // Anyone can fetch host's UPI details for payment
       allow read: if true;
       allow write: if isOwner(hostId);
 
       match /events/{eventId} {
-        // Allow read for guests to see event details
+        // Guests can see event details
         allow read: if true;
         allow write: if isOwner(hostId);
 
         match /transactions/{transactionId} {
-          // Allow guests to create their own transaction record
-          allow create: if true;
-          // Only host can read/update/delete transactions
+          // PRODUCTION SECURITY: Guests can create, but only if they follow strict schema
+          allow create: if isValidTransaction();
+          // Only host can manage transactions
           allow read, update, delete: if isOwner(hostId);
         }
       }

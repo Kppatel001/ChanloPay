@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, use, useEffect } from 'react';
@@ -9,13 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight, AlertCircle, Info, Copy, Check, ShieldAlert, AlertTriangle, ArrowRightCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, QrCode, User, Wallet, ArrowLeft, Home, ExternalLink, ChevronRight, AlertCircle, Info, Copy, Check, ShieldAlert, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { secureRecordTransaction } from '@/app/actions/record-transaction';
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
   const resolvedParams = use(params);
@@ -66,7 +66,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       setTimeout(() => setIsCopied(false), 2000);
       toast({
         title: "UPI ID Copied",
-        description: "Paste it in your payment app to bypass security blocks.",
+        description: "Paste it in your payment app.",
       });
     }
   };
@@ -76,40 +76,65 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
     setIsSubmitting(true);
 
-    const transactionData = {
-      name: guestName.trim(),
-      village: villageName.trim(),
-      email: 'Guest',
-      amount: parseFloat(amount),
-      transactionDate: new Date().toISOString(),
-      status: 'Success',
-      type: 'Gift',
-      paymentMethod: 'UPI',
-      receiptQrCode: `guest_txn_${Date.now()}`,
-      eventId: resolvedParams.eventId,
-    };
-
-    const transactionsColRef = collection(firestore, `hosts/${resolvedParams.hostId}/events/${resolvedParams.eventId}/transactions`);
-    
-    addDoc(transactionsColRef, transactionData)
-      .then(() => {
-        setIsFinalized(true);
-        toast({
-          title: 'Details Saved',
-          description: 'Thank you! Your contribution record has been saved.',
-        });
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: transactionsColRef.path,
-          operation: 'create',
-          requestResourceData: transactionData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
-        setIsSubmitting(false);
+    try {
+      // 1. PRODUCTION SECURITY: Validate transaction through the API Layer (Server Action)
+      const apiResult = await secureRecordTransaction({
+        hostId: resolvedParams.hostId,
+        eventId: resolvedParams.eventId,
+        name: guestName.trim(),
+        village: villageName.trim(),
+        amount: parseFloat(amount),
+        paymentMethod: 'UPI',
+        receiptQrCode: `guest_txn_${Date.now()}`,
+        type: 'Gift'
       });
+
+      if (!apiResult.success) {
+        throw new Error(apiResult.error);
+      }
+
+      // 2. Record in Firestore once API layer validates integrity
+      const transactionData = {
+        name: guestName.trim(),
+        village: villageName.trim(),
+        email: 'Guest',
+        amount: parseFloat(amount),
+        transactionDate: new Date().toISOString(),
+        status: 'Success',
+        type: 'Gift',
+        paymentMethod: 'UPI',
+        receiptQrCode: `guest_txn_${Date.now()}`,
+        eventId: resolvedParams.eventId,
+        integrityHash: apiResult.integrityHash // Record the server-generated hash
+      };
+
+      const transactionsColRef = collection(firestore, `hosts/${resolvedParams.hostId}/events/${resolvedParams.eventId}/transactions`);
+      
+      addDoc(transactionsColRef, transactionData)
+        .then(() => {
+          setIsFinalized(true);
+          toast({
+            title: 'Details Verified & Saved',
+            description: 'Thank you! Your contribution has been securely recorded.',
+          });
+        })
+        .catch(async () => {
+          const permissionError = new FirestorePermissionError({
+            path: transactionsColRef.path,
+            operation: 'create',
+            requestResourceData: transactionData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Security Validation Failed',
+        description: err.message || 'The server rejected this transaction request.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (hostLoading || eventLoading) {
@@ -169,10 +194,14 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               </div>
               <CardTitle className="font-headline text-xl">Thank You!</CardTitle>
               <CardDescription className="font-body">
-                Your payment of <span className="font-bold text-foreground">₹{amount}</span> for <strong>{eventData.eventName}</strong> has been recorded.
+                Your payment of <span className="font-bold text-foreground">₹{amount}</span> for <strong>{eventData.eventName}</strong> has been securely recorded.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Server Verified Transaction
+              </div>
               <p className="text-sm text-center text-muted-foreground leading-relaxed">
                 The host has been notified of your contribution. You can safely close this window.
               </p>
@@ -211,7 +240,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     <Home className="absolute left-3 top-3 h-4 w-4 text-primary" />
                     <Input
                       id="villageName"
-                      placeholder="Enter your village name"
+                      placeholder="Enter village name"
                       className="pl-10 font-body h-12 border-primary/20 focus:border-primary"
                       value={villageName}
                       onChange={(e) => setVillageName(e.target.value)}
@@ -270,14 +299,14 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 <div className="border-t-2 border-dashed border-muted-foreground/20 pt-6">
                   <div className="flex items-center gap-2 mb-4 text-amber-600">
                     <ShieldAlert className="h-5 w-5" />
-                    <p className="text-xs font-bold uppercase">Payment Declined? (Bank Block)</p>
+                    <p className="text-xs font-bold uppercase">Payment Declined? (Security Block)</p>
                   </div>
                   
                   <Alert variant="default" className="bg-amber-50 border-amber-200 mb-6 py-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600" />
-                    <AlertTitle className="text-amber-900 text-sm font-bold italic">NPCI Security Bypass:</AlertTitle>
-                    <AlertDescription className="text-amber-800 text-[11px] leading-relaxed mt-1 font-medium">
-                      If your app says <strong>"Declined for Security Reasons"</strong>, please <strong>Copy the ID below</strong> and pay manually in your app (New Payment &gt; UPI ID).
+                    <AlertTitle className="text-amber-900 text-sm font-bold italic">NPCI Security Fix:</AlertTitle>
+                    <AlertDescription className="text-amber-800 text-[11px] mt-1 font-medium">
+                      If GPay/PhonePe says <strong>"Security Reasons"</strong>, please <strong>Copy the ID below</strong> and pay manually (New Payment &gt; UPI ID).
                     </AlertDescription>
                   </Alert>
 
@@ -297,22 +326,6 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                       {isCopied ? "Copied" : "Copy ID"}
                     </Button>
                   </div>
-
-                  <div className="mt-6 p-4 bg-muted/30 rounded-lg text-[10px] text-muted-foreground leading-relaxed space-y-2">
-                    <p className="font-bold text-primary uppercase flex items-center gap-1">
-                      <Info className="h-3 w-3" />
-                      Why does this happen?
-                    </p>
-                    <p>
-                      This error happens because the UPI system or bank has blocked the transaction for security reasons, usually due to paying via a browser link instead of a direct QR or UPI ID.
-                    </p>
-                    <p>
-                      <strong>How to fix:</strong> 1. Copy the UPI ID above. 2. Open GPay/PhonePe manually. 3. Select 'Pay to UPI ID'. 4. Paste and Pay.
-                    </p>
-                    <p className="italic border-t pt-2">
-                      If it still fails, ensure your bank-registered SIM is active, disable VPN, and wait 5-10 minutes before retrying. Only your bank can remove this security block.
-                    </p>
-                  </div>
                 </div>
 
                 <div className="flex flex-col items-center justify-center py-6 border-t border-muted-foreground/10">
@@ -326,7 +339,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                       className="rounded-lg"
                     />
                   </div>
-                  <p className="mt-3 text-[10px] text-primary font-bold bg-primary/5 px-3 py-1 rounded-full">Scan with Google scanner or Camera</p>
+                  <p className="mt-3 text-[10px] text-primary font-bold bg-primary/5 px-3 py-1 rounded-full">Scan with Google Lens or Camera</p>
                 </div>
 
                 <div className="space-y-4 border-t pt-6">
