@@ -4,6 +4,7 @@ export type Transaction = {
   id: string;
   name: string;
   email: string;
+  mobile?: string;
   village?: string;
   amount: number;
   date: Date;
@@ -13,6 +14,9 @@ export type Transaction = {
   eventId?: string;
   paymentMethod?: string;
   receiptQrCode?: string;
+  receiptStatus?: 'Sent' | 'Failed' | 'Pending';
+  receiptId?: string;
+  integrityHash?: string;
 };
 
 export type Event = {
@@ -33,4 +37,5 @@ export type Host = {
   upi?: string;
   registrationDate?: string;
   kycVerified?: boolean;
+  plan?: 'Free' | 'Silver' | 'Gold' | 'Diamond';
 };

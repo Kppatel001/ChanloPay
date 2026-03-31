@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileDown, Loader2, User, Trash2, Home, RefreshCw } from 'lucide-react';
+import { FileDown, Loader2, User, Trash2, Home, RefreshCw, MessageCircle, Phone } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,9 +102,11 @@ export function TransactionsTable() {
                 amount: data.amount || 0,
                 name: data.name || 'Guest',
                 village: data.village || 'N/A',
+                mobile: data.mobile || 'N/A',
                 email: data.email || 'N/A',
                 status: data.status || 'Success',
                 type: data.type || 'Gift',
+                receiptStatus: data.receiptStatus,
                 date: data.transactionDate
                     ? new Date(data.transactionDate)
                     : new Date(),
@@ -166,11 +168,12 @@ export function TransactionsTable() {
   const handleExportPDF = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     doc.autoTable({
-      head: [['Event', 'Guest Name', 'Village', 'Amount', 'Date']],
+      head: [['Event', 'Guest Name', 'Village', 'Mobile', 'Amount', 'Date']],
       body: transactions.map((t) => [
         t.eventName,
         t.name,
         t.village || 'N/A',
+        t.mobile || 'N/A',
         formatCurrency(t.amount),
         t.date.toLocaleDateString(),
       ]),
@@ -184,6 +187,7 @@ export function TransactionsTable() {
         Event: t.eventName,
         'Guest Name': t.name,
         Village: t.village || 'N/A',
+        Mobile: t.mobile || 'N/A',
         Amount: t.amount,
         Date: t.date,
       }))
@@ -242,8 +246,8 @@ export function TransactionsTable() {
               <TableRow>
                 <TableHead>Event</TableHead>
                 <TableHead>Guest Full Name</TableHead>
-                <TableHead>Village</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Village / Mobile</TableHead>
+                <TableHead>Status / Receipt</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -262,15 +266,31 @@ export function TransactionsTable() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-muted-foreground" />
-                        <span>{transaction.village || 'N/A'}</span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Home className="h-3 w-3 text-muted-foreground" />
+                          <span>{transaction.village || 'N/A'}</span>
+                        </div>
+                        {transaction.mobile && transaction.mobile !== 'N/A' && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            <span>{transaction.mobile}</span>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="default">
-                        {transaction.status}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="default" className="w-fit text-[10px] h-4">
+                          {transaction.status}
+                        </Badge>
+                        {transaction.receiptStatus === 'Sent' && (
+                           <div className="flex items-center gap-1 text-[10px] text-green-600 font-bold">
+                             <MessageCircle className="h-3 w-3" />
+                             WA Sent
+                           </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       {formatCurrency(transaction.amount)}
