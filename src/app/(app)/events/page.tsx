@@ -32,8 +32,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { Event, Host, Transaction } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, ExternalLink, Home, Share2, Printer, Info, Wallet, CheckCircle2, Users } from 'lucide-react';
+import type { Event, Host } from '@/lib/types';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, Share2, Printer, Info, Wallet, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -44,6 +44,7 @@ import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc, ge
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { recordManualEntry } from '@/app/actions/api';
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -156,46 +157,37 @@ export default function EventsPage() {
 
     setIsRecordingTransaction(true);
 
-    const amount = parseFloat(guestAmount);
-    const transactionData = {
-      name: guestName.trim(),
-      village: villageName.trim() || 'N/A',
-      email: 'Manual Entry',
-      amount: amount,
-      transactionDate: new Date().toISOString(),
-      status: 'Success',
-      type: guestType,
-      paymentMethod: 'Cash',
-      receiptQrCode: `manual_txn_${Date.now()}`,
-      eventId: eventId,
-    };
-
-    const transactionsColRef = collection(firestore, `hosts/${user.uid}/events/${eventId}/transactions`);
-    
-    addDoc(transactionsColRef, transactionData)
-      .then(() => {
-        toast({
-          title: "Payment Recorded",
-          description: `Successfully recorded ₹${amount} from ${guestName}.`,
-        });
-        setGuestName('');
-        setVillageName('');
-        setGuestAmount('');
-        setGuestType('Gift');
-        // Update local count
-        setEventCounts(prev => ({ ...prev, [eventId]: (prev[eventId] || 0) + 1 }));
-      })
-      .catch(async () => {
-        const permissionError = new FirestorePermissionError({
-          path: transactionsColRef.path,
-          operation: 'create',
-          requestResourceData: transactionData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
-        setIsRecordingTransaction(false);
+    try {
+      const amount = parseFloat(guestAmount);
+      await recordManualEntry({
+        hostId: user.uid,
+        eventId: eventId,
+        name: guestName.trim(),
+        village: villageName.trim() || 'N/A',
+        amount: amount,
+        paymentMethod: 'Cash',
+        type: guestType as any,
+        language: 'en'
       });
+
+      toast({
+        title: "Payment Recorded",
+        description: `Successfully recorded ₹${amount} from ${guestName}.`,
+      });
+      setGuestName('');
+      setVillageName('');
+      setGuestAmount('');
+      setGuestType('Gift');
+      setEventCounts(prev => ({ ...prev, [eventId]: (prev[eventId] || 0) + 1 }));
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'API Error',
+        description: err.message || 'The firewall blocked this entry.',
+      });
+    } finally {
+      setIsRecordingTransaction(false);
+    }
   };
 
   const handleDeleteEvent = (eventId: string) => {

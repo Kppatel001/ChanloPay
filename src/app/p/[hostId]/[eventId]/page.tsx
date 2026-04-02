@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, use } from 'react';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection, addDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +13,8 @@ import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { createSecureOrder, verifyPaymentSignature } from '@/app/actions/record-transaction';
+import { initiateSecureGuestPayment, finalizeGuestPayment } from '@/app/actions/api';
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
   const resolvedParams = use(params);
@@ -67,86 +66,44 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   };
 
   const handleConfirmPayment = async () => {
-    if (!guestName || !villageName || !amount) return;
+    if (!guestName || !villageName || !amount || !eventData) return;
 
     setIsSubmitting(true);
 
     try {
-      // 1. API LAYER: Create a Secure Order
-      const orderResult = await createSecureOrder({
+      const transactionData = {
         hostId: resolvedParams.hostId,
         eventId: resolvedParams.eventId,
         name: guestName.trim(),
         village: villageName.trim(),
         mobile: mobile,
         amount: parseFloat(amount),
-        paymentMethod: 'Razorpay',
-        type: 'Gift'
-      });
-
-      if (!orderResult.success) {
-        throw new Error(orderResult.error);
-      }
-
-      // 2. SIMULATION: Verify and Trigger Receipt
-      const verification = await verifyPaymentSignature(
-        'pay_mock_123', 
-        orderResult.orderId!, 
-        'signature_mock_123',
-        { 
-            name: guestName.trim(), 
-            amount: parseFloat(amount), 
-            eventName: eventData?.eventName || 'Event', 
-            mobile: mobile,
-            language: language
-        }
-      );
-
-      if (!verification.verified) {
-        throw new Error("Payment verification failed.");
-      }
-
-      // 3. FIRESTORE: Record verified transaction
-      const transactionData = {
-        name: guestName.trim(),
-        village: villageName.trim(),
-        mobile: mobile,
-        email: 'Verified Guest',
-        amount: parseFloat(amount),
-        transactionDate: new Date().toISOString(),
-        status: 'Success',
-        type: 'Gift',
-        paymentMethod: 'Razorpay',
-        receiptQrCode: `razorpay_${orderResult.orderId}`,
-        receiptId: verification.receiptId,
-        receiptStatus: mobile ? 'Sent' : undefined,
-        eventId: resolvedParams.eventId,
-        integrityHash: orderResult.integrityHash
+        paymentMethod: 'Razorpay' as const,
+        type: 'Gift' as const,
+        language: language
       };
 
-      const transactionsColRef = collection(firestore, `hosts/${resolvedParams.hostId}/events/${resolvedParams.eventId}/transactions`);
-      
-      addDoc(transactionsColRef, transactionData)
-        .then(() => {
-          setIsFinalized(true);
-          toast({
-            title: 'Payment Verified & Recorded',
-            description: mobile ? 'Your receipt has been sent to WhatsApp.' : 'Thank you for your contribution!',
-          });
-        })
-        .catch(async () => {
-          const permissionError = new FirestorePermissionError({
-            path: transactionsColRef.path,
-            operation: 'create',
-            requestResourceData: transactionData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+      // 1. FIREWALL API: Initiate Order
+      const order = await initiateSecureGuestPayment(transactionData);
+
+      // 2. FIREWALL API: Finalize and Record (Simulating Gateway return)
+      await finalizeGuestPayment(
+        order.orderId,
+        order.integrityHash,
+        transactionData,
+        eventData.eventName
+      );
+
+      setIsFinalized(true);
+      toast({
+        title: 'Payment Successful',
+        description: mobile ? 'Your receipt has been sent to WhatsApp.' : 'Thank you for your contribution!',
+      });
     } catch (err: any) {
       toast({
         variant: 'destructive',
-        title: 'Payment Failed',
-        description: err.message || 'The secure gateway rejected the payment.',
+        title: 'Security Alert',
+        description: err.message || 'The secure firewall rejected the request.',
       });
     } finally {
       setIsSubmitting(false);
@@ -198,15 +155,15 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               <div className="mx-auto bg-green-100 text-green-600 p-2 rounded-full w-fit mb-2">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-              <CardTitle className="font-headline text-xl">Payment Successful!</CardTitle>
+              <CardTitle className="font-headline text-xl">Payment Recorded!</CardTitle>
               <CardDescription className="font-body">
-                ₹{amount} for <strong>{eventData.eventName}</strong> has been securely recorded.
+                ₹{amount} for <strong>{eventData.eventName}</strong> has been securely logged.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Gateway Verified Transaction
+                Firewall Verified Transaction
               </div>
               {mobile && (
                 <div className="text-center p-3 bg-primary/5 rounded-lg border border-primary/10">
@@ -287,7 +244,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         ) : (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
             <CardHeader className="text-center bg-primary/5 rounded-t-lg">
-              <CardTitle className="font-headline text-xl">Secure Checkout</CardTitle>
+              <CardTitle className="font-headline text-xl">Confirm & Record</CardTitle>
               <CardDescription>
                 Paying <span className="font-bold text-foreground">₹{amount}</span> to {hostProfile.name}
               </CardDescription>
@@ -297,7 +254,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               <div className="space-y-4">
                 <Button className="w-full h-16 text-lg font-bold shadow-md" onClick={handleConfirmPayment} disabled={isSubmitting}>
                   {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CreditCard className="mr-2 h-6 w-6" />}
-                  Pay via Secure Gateway
+                  Confirm & Finalize
                 </Button>
 
                 <div className="relative py-2">
@@ -317,7 +274,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
                 <AlertTitle className="text-amber-900 text-sm font-bold">Security Block Info:</AlertTitle>
                 <AlertDescription className="text-amber-800 text-[11px] mt-1 leading-tight">
-                  If your app says <strong>"Declined for Security"</strong>, please copy the ID below and pay manually via "New Payment" in your app.
+                  If your app says <strong>"Declined for Security"</strong>, copy the ID below and pay manually in your app.
                 </AlertDescription>
               </Alert>
 
