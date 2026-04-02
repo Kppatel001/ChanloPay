@@ -17,6 +17,7 @@ export type Transaction = {
   receiptStatus?: 'Sent' | 'Failed' | 'Pending';
   receiptId?: string;
   integrityHash?: string;
+  language?: 'en' | 'gu' | 'hi';
 };
 
 export type Event = {

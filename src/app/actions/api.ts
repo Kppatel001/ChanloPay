@@ -31,11 +31,11 @@ export type TransactionInput = z.infer<typeof TransactionInputSchema>;
 
 const templates = {
   en: (data: any) => 
-    `Namaste ${data.name}! 🙏\n\nThank you for your generous gift of ₹${data.amount} for ${data.eventName}. We have securely received your contribution.\n\nTxn ID: ${data.txnId}\n\nWith love,\nChanloPay Team`,
+    `Namaste ${data.name}! 🙏\n\nThank you for your generous gift of ₹${data.amount} for ${data.eventName}. We have securely received your contribution.\n\nReceipt ID: ${data.receiptId}\n\nWith love,\nChanloPay Team`,
   gu: (data: any) => 
-    `નમસ્તે ${data.name}! 🙏\n\n${data.eventName} માટે તમારી ₹${data.amount} ની ભેટ બદલ ખૂબ ખૂબ આભાર. અમને તમારું યોગદાન સુરક્ષિત રીતે પ્રાપ્ત થયું છે.\n\nTxn ID: ${data.txnId}\n\nશુભેચ્છા,\nChanloPay ટીમ`,
+    `નમસ્તે ${data.name}! 🙏\n\n${data.eventName} માટે તમારી ₹${data.amount} ની ભેટ બદલ ખૂબ ખૂબ આભાર. અમને તમારું યોગદાન સુરક્ષિત રીતે પ્રાપ્ત થયું છે.\n\nરસીદ ID: ${data.receiptId}\n\nશુભેચ્છા,\nChanloPay ટીમ`,
   hi: (data: any) => 
-    `नमस्ते ${data.name}! 🙏\n\n${data.eventName} के लिए आपके ₹${data.amount} के उपहार के लिए बहुत-बहुत धन्यवाद। हमें आपका योगदान सुरक्षित रूप से प्राप्त हो गया है।\n\nTxn ID: ${data.txnId}\n\nशुभकामनाएं,\nChanloPay टीम`,
+    `नमस्ते ${data.name}! 🙏\n\n${data.eventName} के लिए आपके ₹${data.amount} के उपहार के लिए बहुत-बहुत धन्यवाद। हमें आपका योगदान सुरक्षित रूप से प्राप्त हो गया है।\n\nरसीद आईडी: ${data.receiptId}\n\nशुभकामनाएं,\nChanloPay टीम`,
 };
 
 // --- API ACTIONS ---
@@ -75,11 +75,14 @@ export async function finalizeGuestPayment(
 
   const { firestore } = initializeFirebase();
   const data = validation.data;
+  const receiptId = `RCPT_${Math.random().toString(36).substring(7).toUpperCase()}`;
 
-  // Trigger WhatsApp (Async)
+  // Trigger WhatsApp (Simulation)
   if (data.mobile && data.mobile.length === 10) {
-    const message = templates[data.language]({ ...data, eventName, txnId: orderId });
-    console.log(`[WHATSAPP API] Sending Guest Receipt to ${data.mobile}: ${message}`);
+    const message = templates[data.language]({ ...data, eventName, receiptId });
+    // In production, you would call fetch('https://api.twilio.com/...') or official WhatsApp API here
+    console.log(`[PROD FIREWALL] WhatsApp Receipt Triggered for ${data.mobile}`);
+    console.log(`Message Content:\n${message}`);
   }
 
   const transactionData = {
@@ -87,6 +90,7 @@ export async function finalizeGuestPayment(
     transactionDate: new Date().toISOString(),
     status: 'Success',
     receiptQrCode: `verified_${orderId}`,
+    receiptId: receiptId,
     integrityHash,
     receiptStatus: (data.mobile && data.mobile.length === 10) ? 'Sent' : 'None',
   };
@@ -94,7 +98,7 @@ export async function finalizeGuestPayment(
   const txnRef = collection(firestore, `hosts/${data.hostId}/events/${data.eventId}/transactions`);
   await addDoc(txnRef, transactionData);
 
-  return { success: true, receiptId: `RCPT_${Date.now()}` };
+  return { success: true, receiptId };
 }
 
 /**
@@ -106,19 +110,21 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
 
   const { firestore } = initializeFirebase();
   const data = validation.data;
-  const txnId = `MANUAL_${Date.now()}`;
+  const receiptId = `RCPT_MAN_${Date.now().toString().slice(-6).toUpperCase()}`;
 
-  // Trigger WhatsApp (Async)
+  // Trigger WhatsApp (Simulation)
   if (data.mobile && data.mobile.length === 10) {
-    const message = templates[data.language]({ ...data, eventName, txnId });
-    console.log(`[WHATSAPP API] Sending Manual Receipt to ${data.mobile}: ${message}`);
+    const message = templates[data.language]({ ...data, eventName, receiptId });
+    console.log(`[PROD FIREWALL] Manual Receipt Triggered for ${data.mobile}`);
+    console.log(`Message Content:\n${message}`);
   }
 
   const transactionData = {
     ...data,
     transactionDate: new Date().toISOString(),
     status: 'Success',
-    receiptQrCode: txnId,
+    receiptQrCode: `MANUAL_${Date.now()}`,
+    receiptId: receiptId,
     paymentMethod: 'Cash',
     receiptStatus: (data.mobile && data.mobile.length === 10) ? 'Sent' : 'None',
   };
@@ -126,5 +132,5 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
   const txnRef = collection(firestore, `hosts/${data.hostId}/events/${data.eventId}/transactions`);
   await addDoc(txnRef, transactionData);
 
-  return { success: true };
+  return { success: true, receiptId };
 }
