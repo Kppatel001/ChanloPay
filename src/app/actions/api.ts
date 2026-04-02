@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -9,7 +8,7 @@
  */
 
 import { z } from 'zod';
-import { doc, getDoc, collection, addDoc, serverTimestamp, getFirestore } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 // --- SCHEMAS ---
@@ -43,8 +42,6 @@ const templates = {
 
 /**
  * GENERATE SECURE ORDER (GUEST FLOW)
- * - Validates request before starting gateway
- * - Generates integrity hash to prevent tampering
  */
 export async function initiateSecureGuestPayment(input: TransactionInput) {
   const validation = TransactionInputSchema.safeParse(input);
@@ -53,8 +50,6 @@ export async function initiateSecureGuestPayment(input: TransactionInput) {
   }
 
   const data = validation.data;
-  
-  // Simulation of rate limiting / security check
   const mockOrderId = `order_${Math.random().toString(36).substring(7)}`;
   const integrityHash = btoa(`${mockOrderId}-${data.amount}-${Date.now()}`);
 
@@ -68,9 +63,6 @@ export async function initiateSecureGuestPayment(input: TransactionInput) {
 
 /**
  * VERIFY AND RECORD TRANSACTION (GUEST FLOW)
- * - Verifies gateway signature (mock)
- * - Sends WhatsApp Receipt
- * - Writes to Firestore securely
  */
 export async function finalizeGuestPayment(
   orderId: string, 
@@ -84,24 +76,19 @@ export async function finalizeGuestPayment(
   const { firestore } = initializeFirebase();
   const data = validation.data;
 
-  // 1. Verify Payment (Mocking real Razorpay signature verification)
-  const isSignatureValid = orderId.length > 5; 
-  if (!isSignatureValid) throw new Error("Invalid payment signature detected.");
-
-  // 2. Trigger WhatsApp (Async)
+  // Trigger WhatsApp (Async)
   if (data.mobile && data.mobile.length === 10) {
     const message = templates[data.language]({ ...data, eventName, txnId: orderId });
-    console.log(`[WHATSAPP API] Sending to ${data.mobile}: ${message}`);
+    console.log(`[WHATSAPP API] Sending Guest Receipt to ${data.mobile}: ${message}`);
   }
 
-  // 3. Record in Firestore
   const transactionData = {
     ...data,
     transactionDate: new Date().toISOString(),
     status: 'Success',
     receiptQrCode: `verified_${orderId}`,
     integrityHash,
-    receiptStatus: data.mobile ? 'Sent' : 'None',
+    receiptStatus: (data.mobile && data.mobile.length === 10) ? 'Sent' : 'None',
   };
 
   const txnRef = collection(firestore, `hosts/${data.hostId}/events/${data.eventId}/transactions`);
@@ -112,21 +99,28 @@ export async function finalizeGuestPayment(
 
 /**
  * SECURE MANUAL RECORD (HOST FLOW)
- * - Used by hosts to record cash/offline gifts
  */
-export async function recordManualEntry(input: TransactionInput) {
+export async function recordManualEntry(input: TransactionInput, eventName: string) {
   const validation = TransactionInputSchema.safeParse(input);
   if (!validation.success) throw new Error("Invalid entry data.");
 
   const { firestore } = initializeFirebase();
   const data = validation.data;
+  const txnId = `MANUAL_${Date.now()}`;
+
+  // Trigger WhatsApp (Async)
+  if (data.mobile && data.mobile.length === 10) {
+    const message = templates[data.language]({ ...data, eventName, txnId });
+    console.log(`[WHATSAPP API] Sending Manual Receipt to ${data.mobile}: ${message}`);
+  }
 
   const transactionData = {
     ...data,
     transactionDate: new Date().toISOString(),
     status: 'Success',
-    receiptQrCode: `manual_${Date.now()}`,
+    receiptQrCode: txnId,
     paymentMethod: 'Cash',
+    receiptStatus: (data.mobile && data.mobile.length === 10) ? 'Sent' : 'None',
   };
 
   const txnRef = collection(firestore, `hosts/${data.hostId}/events/${data.eventId}/transactions`);

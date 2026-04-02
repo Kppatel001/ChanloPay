@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -33,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, Share2, Printer, Info, Wallet, Users } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, Share2, Printer, Info, Wallet, Users, Phone, Languages } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -92,8 +91,10 @@ export default function EventsPage() {
   // Recording transaction state
   const [guestName, setGuestName] = useState('');
   const [villageName, setVillageName] = useState('');
+  const [guestMobile, setGuestMobile] = useState('');
   const [guestAmount, setGuestAmount] = useState('');
   const [guestType, setGuestType] = useState('Gift');
+  const [guestLanguage, setGuestLanguage] = useState('en');
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   
   const handleOpenCreateEventDialog = () => {
@@ -145,8 +146,8 @@ export default function EventsPage() {
     });
   };
 
-  const handleRecordTransaction = async (eventId: string) => {
-    if (!guestName.trim() || !guestAmount || !user || !firestore || !eventId) {
+  const handleRecordTransaction = async (event: Event) => {
+    if (!guestName.trim() || !guestAmount || !user || !firestore || !event.id) {
       toast({
         variant: 'destructive',
         title: 'Missing Details',
@@ -161,24 +162,26 @@ export default function EventsPage() {
       const amount = parseFloat(guestAmount);
       await recordManualEntry({
         hostId: user.uid,
-        eventId: eventId,
+        eventId: event.id,
         name: guestName.trim(),
         village: villageName.trim() || 'N/A',
+        mobile: guestMobile,
         amount: amount,
         paymentMethod: 'Cash',
         type: guestType as any,
-        language: 'en'
-      });
+        language: guestLanguage as any
+      }, event.eventName);
 
       toast({
         title: "Payment Recorded",
-        description: `Successfully recorded ₹${amount} from ${guestName}.`,
+        description: guestMobile ? `₹${amount} recorded and receipt sent to WhatsApp.` : `Successfully recorded ₹${amount} from ${guestName}.`,
       });
       setGuestName('');
       setVillageName('');
+      setGuestMobile('');
       setGuestAmount('');
       setGuestType('Gift');
-      setEventCounts(prev => ({ ...prev, [eventId]: (prev[eventId] || 0) + 1 }));
+      setEventCounts(prev => ({ ...prev, [event.id!]: (prev[event.id!] || 0) + 1 }));
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -483,7 +486,7 @@ export default function EventsPage() {
                               Manual Record Entry
                             </h4>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                Manually record cash or traditional gifts received at the venue.
+                                Manually record cash received. Enter WhatsApp number to send a digital receipt.
                             </p>
                             <div className="grid gap-3">
                               <div className="grid gap-1">
@@ -505,6 +508,36 @@ export default function EventsPage() {
                                   value={villageName}
                                   onChange={(e) => setVillageName(e.target.value)}
                                 />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="grid gap-1">
+                                  <Label htmlFor="guest-mobile" className="text-xs">WhatsApp Number</Label>
+                                  <div className="relative">
+                                    <Phone className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                    <Input 
+                                      id="guest-mobile" 
+                                      placeholder="10-digit" 
+                                      className="pl-8 h-9 text-sm"
+                                      value={guestMobile}
+                                      onChange={(e) => setGuestMobile(e.target.value)}
+                                      maxLength={10}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-1">
+                                  <Label htmlFor="guest-language" className="text-xs">Receipt Language</Label>
+                                  <Select value={guestLanguage} onValueChange={setGuestLanguage}>
+                                    <SelectTrigger id="guest-language" className="h-9 text-sm">
+                                      <Languages className="mr-2 h-3.5 w-3.5 opacity-50" />
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="en">English</SelectItem>
+                                      <SelectItem value="gu">ગુજરાતી</SelectItem>
+                                      <SelectItem value="hi">हिन्दी</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="grid gap-1">
@@ -536,11 +569,11 @@ export default function EventsPage() {
                                 className="w-full mt-2 font-bold" 
                                 size="sm"
                                 disabled={isRecordingTransaction}
-                                onClick={() => handleRecordTransaction(event.id!)}
+                                onClick={() => handleRecordTransaction(event)}
                               >
                                 {isRecordingTransaction && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 <Wallet className="mr-2 h-4 w-4" />
-                                Record Entry
+                                Record & Send Receipt
                               </Button>
                             </div>
                           </div>
