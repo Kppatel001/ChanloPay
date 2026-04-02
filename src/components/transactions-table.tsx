@@ -394,6 +394,12 @@ export function TransactionsTable() {
       {/* Digital Receipt Dialog */}
       <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
         <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white border-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Digital Receipt</DialogTitle>
+            <DialogDescription>
+              View detailed receipt for the selected transaction.
+            </DialogDescription>
+          </DialogHeader>
           <div className="bg-primary p-6 text-primary-foreground flex flex-col items-center gap-2">
             <Logo className="h-10 w-10 text-white" />
             <div className="text-center">
