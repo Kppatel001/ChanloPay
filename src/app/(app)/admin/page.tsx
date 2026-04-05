@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/header';
 import { useUser, useFirestore } from '@/firebase';
-import { collectionGroup, query, orderBy, onSnapshot, DocumentData, QuerySnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, DocumentData, QuerySnapshot } from 'firebase/firestore';
 import type { WithdrawalRequest } from '@/lib/types';
 import {
   Card,
@@ -43,8 +43,8 @@ export default function AdminPage() {
         return;
     }
 
-    // COLLECTION GROUP QUERY: Fetches all withdrawals from all hosts
-    const q = query(collectionGroup(firestore, 'withdrawals'), orderBy('requestDate', 'desc'));
+    // Standard collection query on root "withdrawals" (No composite index needed for single field orderBy)
+    const q = query(collection(firestore, 'withdrawals'), orderBy('requestDate', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
       const data = snapshot.docs.map(doc => ({

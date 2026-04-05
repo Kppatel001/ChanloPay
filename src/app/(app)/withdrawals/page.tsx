@@ -3,7 +3,7 @@
 
 import { Header } from '@/components/layout/header';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { WithdrawalRequest } from '@/lib/types';
 import {
   Card,
@@ -29,12 +29,21 @@ export default function WithdrawalsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
+  // Root collection query filtered by hostId
   const withdrawalsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
-    return query(collection(firestore, `hosts/${user.uid}/withdrawals`), orderBy('requestDate', 'desc'));
+    return query(
+      collection(firestore, `withdrawals`), 
+      where('hostId', '==', user.uid)
+    );
   }, [user, firestore]);
 
-  const { data: withdrawals, isLoading } = useCollection<WithdrawalRequest>(withdrawalsQuery);
+  const { data: rawWithdrawals, isLoading } = useCollection<WithdrawalRequest>(withdrawalsQuery);
+
+  // Sorting in memory to avoid needing complex composite indexes for every host
+  const withdrawals = rawWithdrawals ? [...rawWithdrawals].sort((a, b) => 
+    new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime()
+  ) : [];
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-IN', {

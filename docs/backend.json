@@ -151,6 +151,9 @@
         "id": {
           "type": "string"
         },
+        "hostId": {
+          "type": "string"
+        },
         "eventId": {
           "type": "string"
         },
@@ -185,6 +188,7 @@
       },
       "required": [
         "id",
+        "hostId",
         "eventId",
         "totalAmount",
         "platformFee",
@@ -232,13 +236,13 @@
         }
       },
       {
-        "path": "/hosts/{hostId}/withdrawals/{withdrawalId}",
+        "path": "/withdrawals/{withdrawalId}",
         "definition": {
           "entityName": "WithdrawalRequest",
           "schema": {
             "$ref": "#/backend/entities/WithdrawalRequest"
           },
-          "description": "Stores withdrawal requests."
+          "description": "Stores all withdrawal requests in a flat root collection for easier administrative querying."
         }
       }
     ]

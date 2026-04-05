@@ -32,10 +32,15 @@ service cloud.firestore {
     }
 
     /**
-     * COLLECTION GROUP: Allow Admin to read all withdrawals
+     * Root Withdrawals Collection
      */
-    match /{path=**}/withdrawals/{withdrawalId} {
-      allow read: if isAdmin();
+    match /withdrawals/{withdrawalId} {
+      // Admin can see everything
+      allow read, update: if isAdmin();
+      // Platform logic (Server Actions) can create
+      allow create: if true; 
+      // Hosts can read their own
+      allow read: if isSignedIn() && (resource == null || resource.data.hostId == request.auth.uid);
     }
 
     /**
@@ -61,13 +66,9 @@ service cloud.firestore {
         }
       }
 
+      // Legacy path cleanup: restrict access
       match /withdrawals/{withdrawalId} {
-        // Allow platform to create withdrawal requests
-        allow create: if isValidWithdrawal();
-        // Allow admin to update status
-        allow update: if isAdmin();
-        // Only host can view their withdrawal history
-        allow read, update, delete: if isOwner(hostId);
+        allow read, write: if isOwner(hostId);
       }
 
       // Catch-all for other host data

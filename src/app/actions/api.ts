@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod';
-import { collection, addDoc, doc, updateDoc, getDocs, query, where, getDoc, collectionGroup } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 // --- SCHEMAS ---
@@ -163,7 +163,7 @@ export async function requestWithdrawal(hostId: string, eventId: string) {
   const hostUpi = hostData?.upi || 'PENDING_SETUP';
   const hostName = hostData?.name || 'Unknown Host';
 
-  // 5. Create Withdrawal Record
+  // 5. Create Withdrawal Record in ROOT collection
   const withdrawalData = {
     hostId,
     hostName,
@@ -177,8 +177,8 @@ export async function requestWithdrawal(hostId: string, eventId: string) {
     hostUpi
   };
 
-  // 6. Write to Firestore
-  const withdrawalRef = collection(firestore, `hosts/${hostId}/withdrawals`);
+  // 6. Write to Firestore root collection (Fixes Collection Group Indexing requirements)
+  const withdrawalRef = collection(firestore, `withdrawals`);
   await addDoc(withdrawalRef, withdrawalData);
 
   // 7. Mark Event as Withdrawn
@@ -196,7 +196,8 @@ export async function updateWithdrawalStatus(
   newStatus: 'Processing' | 'Completed' | 'Rejected'
 ) {
   const { firestore } = initializeFirebase();
-  const withdrawalRef = doc(firestore, `hosts/${hostId}/withdrawals`, withdrawalId);
+  // Update in root withdrawals collection
+  const withdrawalRef = doc(firestore, `withdrawals`, withdrawalId);
   
   await updateDoc(withdrawalRef, {
     status: newStatus,
