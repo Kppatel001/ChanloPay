@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -8,7 +9,7 @@
  */
 
 import { z } from 'zod';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 // --- SCHEMAS ---
@@ -29,10 +30,6 @@ export type TransactionInput = z.infer<typeof TransactionInputSchema>;
 
 // --- WHATSAPP ENGINE ---
 
-/**
- * In Production: Call the Meta WhatsApp Cloud API.
- * Currently: Simulated in the console with production-ready templates.
- */
 async function sendWhatsAppReceipt(data: any, eventName: string, receiptId: string) {
   const templates = {
     en: `Namaste ${data.name}! 🙏\n\nThank you for your generous gift of ₹${data.amount} for ${eventName}. We have securely received your contribution.\n\nReceipt ID: ${receiptId}\n\nWith love,\nChanloPay Team`,
@@ -41,21 +38,6 @@ async function sendWhatsAppReceipt(data: any, eventName: string, receiptId: stri
   };
 
   const message = templates[data.language as 'en' | 'gu' | 'hi'] || templates.en;
-
-  // REAL INTEGRATION POINT
-  // if (process.env.WHATSAPP_ACCESS_TOKEN && data.mobile) {
-  //   await fetch(`https://graph.facebook.com/v17.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-  //     method: 'POST',
-  //     headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({
-  //       messaging_product: "whatsapp",
-  //       to: `91${data.mobile}`,
-  //       type: "text",
-  //       text: { body: message }
-  //     })
-  //   });
-  // }
-
   console.log(`[FIREWALL SECURE] WhatsApp Triggered for ${data.mobile || 'Unknown'}`);
   console.log(`Content:\n${message}`);
   return true;
@@ -63,9 +45,6 @@ async function sendWhatsAppReceipt(data: any, eventName: string, receiptId: stri
 
 // --- API ACTIONS ---
 
-/**
- * GENERATE SECURE ORDER (GUEST FLOW)
- */
 export async function initiateSecureGuestPayment(input: TransactionInput) {
   const validation = TransactionInputSchema.safeParse(input);
   if (!validation.success) {
@@ -84,9 +63,6 @@ export async function initiateSecureGuestPayment(input: TransactionInput) {
   };
 }
 
-/**
- * VERIFY AND RECORD TRANSACTION (GUEST FLOW)
- */
 export async function finalizeGuestPayment(
   orderId: string, 
   integrityHash: string, 
@@ -100,7 +76,6 @@ export async function finalizeGuestPayment(
   const data = validation.data;
   const receiptId = `RCPT_${Math.random().toString(36).substring(7).toUpperCase()}`;
 
-  // Trigger WhatsApp (Verified Flow)
   if (data.mobile && data.mobile.length === 10) {
     await sendWhatsAppReceipt(data, eventName, receiptId);
   }
@@ -121,9 +96,6 @@ export async function finalizeGuestPayment(
   return { success: true, receiptId };
 }
 
-/**
- * SECURE MANUAL RECORD (HOST FLOW)
- */
 export async function recordManualEntry(input: TransactionInput, eventName: string) {
   const validation = TransactionInputSchema.safeParse(input);
   if (!validation.success) throw new Error("Invalid entry data.");
@@ -132,7 +104,6 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
   const data = validation.data;
   const receiptId = `RCPT_MAN_${Date.now().toString().slice(-6).toUpperCase()}`;
 
-  // Trigger WhatsApp (Verified Flow)
   if (data.mobile && data.mobile.length === 10) {
     await sendWhatsAppReceipt(data, eventName, receiptId);
   }
@@ -151,4 +122,63 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
   await addDoc(txnRef, transactionData);
 
   return { success: true, receiptId };
+}
+
+/**
+ * SECURE WITHDRAWAL REQUEST (PLATFORM LOGIC)
+ */
+export async function requestWithdrawal(hostId: string, eventId: string) {
+  const { firestore } = initializeFirebase();
+  
+  // 1. Verify Event ownership and fetch data
+  const eventRef = doc(firestore, `hosts/${hostId}/events/${eventId}`);
+  const eventSnap = await getDoc(eventRef);
+  
+  if (!eventSnap.exists()) throw new Error("Event not found.");
+  const eventData = eventSnap.data();
+  
+  if (eventData.withdrawalRequested) throw new Error("Withdrawal already requested for this event.");
+
+  // 2. Fetch all successful transactions for this event
+  const txnRef = collection(firestore, `hosts/${hostId}/events/${eventId}/transactions`);
+  const q = query(txnRef, where("status", "==", "Success"));
+  const querySnapshot = await getDocs(q);
+  
+  let totalAmount = 0;
+  querySnapshot.forEach((doc) => {
+    totalAmount += doc.data().amount || 0;
+  });
+
+  if (totalAmount <= 0) throw new Error("No funds available to withdraw.");
+
+  // 3. Calculate Fee (2%)
+  const platformFee = totalAmount * 0.02;
+  const payoutAmount = totalAmount - platformFee;
+
+  // 4. Fetch Host UPI from Settings
+  const hostRef = doc(firestore, `hosts/${hostId}`);
+  const hostSnap = await getDoc(hostRef);
+  const hostUpi = hostSnap.data()?.upi;
+
+  if (!hostUpi) throw new Error("Please set your UPI ID in Settings before withdrawing.");
+
+  // 5. Create Withdrawal Record
+  const withdrawalData = {
+    eventId,
+    eventName: eventData.eventName,
+    totalAmount,
+    platformFee,
+    payoutAmount,
+    status: 'Pending Review',
+    requestDate: new Date().toISOString(),
+    hostUpi
+  };
+
+  const withdrawalRef = collection(firestore, `hosts/${hostId}/withdrawals`);
+  await addDoc(withdrawalRef, withdrawalData);
+
+  // 6. Mark Event as Withdrawn
+  await updateDoc(eventRef, { withdrawalRequested: true });
+
+  return { success: true, payoutAmount };
 }

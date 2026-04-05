@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -13,6 +14,7 @@ import {
   CalendarPlus,
   ShieldCheck,
   Settings,
+  Wallet2,
 } from 'lucide-react';
 
 const navItems = [
@@ -30,6 +32,11 @@ const navItems = [
     href: '/events',
     icon: CalendarPlus,
     label: 'Events',
+  },
+  {
+    href: '/withdrawals',
+    icon: Wallet2,
+    label: 'Withdrawals',
   },
   {
     href: '/fraud-detection',

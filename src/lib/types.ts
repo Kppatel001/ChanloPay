@@ -1,3 +1,4 @@
+
 import { FieldValue } from 'firebase/firestore';
 
 export type Transaction = {
@@ -28,6 +29,7 @@ export type Event = {
   location: string;
   qrCode: string;
   createdAt?: FieldValue;
+  withdrawalRequested?: boolean;
 };
 
 export type Host = {
@@ -39,4 +41,17 @@ export type Host = {
   registrationDate?: string;
   kycVerified?: boolean;
   plan?: 'Free' | 'Silver' | 'Gold' | 'Diamond';
+};
+
+export type WithdrawalRequest = {
+  id: string;
+  eventId: string;
+  eventName: string;
+  totalAmount: number;
+  platformFee: number;
+  payoutAmount: number;
+  status: 'Pending Review' | 'Processing' | 'Completed' | 'Rejected';
+  requestDate: string;
+  processedDate?: string;
+  hostUpi: string;
 };

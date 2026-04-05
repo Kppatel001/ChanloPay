@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -13,9 +14,9 @@ import {
 import { OverviewChart } from '@/components/dashboard/overview-chart';
 import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, where } from 'firebase/firestore';
 import type { Event, Transaction } from '@/lib/types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as ChartTooltip } from 'recharts';
+import { Wallet2, ShieldCheck, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -53,7 +54,8 @@ export default function DashboardPage() {
             events.map(async (event) => {
             if (event.id) {
                 const transactionsQuery = query(
-                collection(firestore, `hosts/${user.uid}/events/${event.id}/transactions`)
+                    collection(firestore, `hosts/${user.uid}/events/${event.id}/transactions`),
+                    where("status", "==", "Success")
                 );
                 const querySnapshot = await getDocs(transactionsQuery);
                 querySnapshot.forEach((doc) => {
@@ -87,110 +89,103 @@ export default function DashboardPage() {
   
   const isLoading = areEventsLoading || isTransactionsLoading;
 
-  const totalRevenue = transactions
-    .filter((t) => t.status === 'Success')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const successfulTransactionsCount = transactions.filter(
-    (t) => t.status === 'Success'
-  ).length;
-
+  const totalCollected = transactions.reduce((sum, t) => sum + t.amount, 0);
   const eventsCount = events?.length ?? 0;
 
-  // Overview Chart Data (Revenue by Month)
+  // Wallet Logic: Only show balance for events where withdrawal HAS NOT been requested
+  const walletBalance = events?.reduce((acc, event) => {
+      if (event.withdrawalRequested) return acc;
+      const eventTotal = transactions
+        .filter(t => t.eventName === event.eventName)
+        .reduce((sum, t) => sum + t.amount, 0);
+      return acc + eventTotal;
+  }, 0) || 0;
+
+  // Chart Data
   const monthlyRevenue = transactions.reduce((acc, transaction) => {
-    if (transaction.status === 'Success') {
-      const month = transaction.date.toLocaleString('default', { month: 'short' });
-      if (!acc[month]) {
-        acc[month] = { month: month, revenue: 0 };
-      }
-      acc[month].revenue += transaction.amount;
-    }
+    const month = transaction.date.toLocaleString('default', { month: 'short' });
+    if (!acc[month]) acc[month] = { month: month, revenue: 0 };
+    acc[month].revenue += transaction.amount;
     return acc;
   }, {} as Record<string, { month: string; revenue: number }>);
-  
   const chartData = Object.values(monthlyRevenue);
 
-  // Gift Type Breakdown Data
-  const giftTypeBreakdown = transactions.reduce((acc, t) => {
-    if (t.status === 'Success') {
-      const type = t.type || 'Gift';
-      acc[type] = (acc[type] || 0) + t.amount;
-    }
-    return acc;
-  }, {} as Record<string, number>);
-
-  const pieChartData = Object.entries(giftTypeBreakdown).map(([name, value]) => ({
-    name,
-    value,
-  }));
-
-  const COLORS = ['#9400D3', '#D30028', '#E6E0EB', '#4b5563'];
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <Header pageTitle="Dashboard" />
+      <Header pageTitle="Platform Dashboard" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <StatsCards
-          totalRevenue={totalRevenue}
-          totalTransactions={successfulTransactionsCount}
-          eventsCount={eventsCount}
-          isLoading={isLoading}
-        />
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-2 opacity-10">
+                    <Wallet2 className="h-24 w-24" />
+                </div>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2 text-primary-foreground">
+                        <Wallet2 className="h-4 w-4" />
+                        Wallet Balance
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-3xl font-black">{formatCurrency(walletBalance)}</div>
+                    <p className="text-[10px] mt-2 opacity-70 flex items-center gap-1">
+                        <ShieldCheck className="h-3 w-3" />
+                        Secured by ChanloPay Platform
+                    </p>
+                </CardContent>
+            </Card>
+
+            <Card className="border-primary/10 shadow-md">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Total Lifetime
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{formatCurrency(totalCollected)}</div>
+                </CardContent>
+            </Card>
+
+            <Card className="border-primary/10 shadow-md">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Active Events</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{eventsCount}</div>
+                </CardContent>
+            </Card>
+
+            <Card className="border-primary/10 shadow-md">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Fee Rate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold text-primary">2.0%</div>
+                </CardContent>
+            </Card>
+        </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4">
+          <Card className="lg:col-span-4 border-primary/10">
             <CardHeader>
-              <CardTitle>Revenue Overview</CardTitle>
-              <CardDescription>Monthly growth of wedding contributions.</CardDescription>
+              <CardTitle>Collection Growth</CardTitle>
+              <CardDescription>Monthly platform collection trends.</CardDescription>
             </CardHeader>
             <CardContent>
               <OverviewChart data={chartData} isLoading={isLoading} />
             </CardContent>
           </Card>
           
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Contribution Breakdown</CardTitle>
-              <CardDescription>Revenue by gift type category.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              {isLoading ? (
-                <div className="flex h-full items-center justify-center">Loading...</div>
-              ) : pieChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip 
-                      formatter={(value) => `₹${value}`}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-                  No breakdown data available.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
-          <RecentTransactions
-            transactions={transactions}
-            isLoading={isLoading}
-          />
+          <div className="lg:col-span-3">
+             <RecentTransactions
+                transactions={transactions}
+                isLoading={isLoading}
+              />
+          </div>
         </div>
       </main>
     </div>
