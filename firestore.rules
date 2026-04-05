@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -8,6 +9,10 @@ service cloud.firestore {
 
     function isOwner(hostId) {
       return isSignedIn() && request.auth.uid == hostId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'admin@chanlopay.com';
     }
 
     // PRODUCTION SECURITY: Transaction Validation
@@ -24,6 +29,13 @@ service cloud.firestore {
       return data.totalAmount > 0 
           && data.payoutAmount > 0
           && data.status == 'Pending Review';
+    }
+
+    /**
+     * COLLECTION GROUP: Allow Admin to read all withdrawals
+     */
+    match /{path=**}/withdrawals/{withdrawalId} {
+      allow read: if isAdmin();
     }
 
     /**
@@ -52,6 +64,8 @@ service cloud.firestore {
       match /withdrawals/{withdrawalId} {
         // Allow platform to create withdrawal requests
         allow create: if isValidWithdrawal();
+        // Allow admin to update status
+        allow update: if isAdmin();
         // Only host can view their withdrawal history
         allow read, update, delete: if isOwner(hostId);
       }

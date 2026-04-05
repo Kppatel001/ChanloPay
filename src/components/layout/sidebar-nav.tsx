@@ -15,7 +15,9 @@ import {
   ShieldCheck,
   Settings,
   Wallet2,
+  Lock,
 } from 'lucide-react';
+import { useUser } from '@/firebase';
 
 const navItems = [
   {
@@ -52,6 +54,8 @@ const navItems = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const isAdmin = user?.email === 'admin@chanlopay.com';
 
   return (
     <SidebarMenu>
@@ -68,6 +72,21 @@ export function SidebarNav() {
           </Link>
         </SidebarMenuItem>
       ))}
+      
+      {isAdmin && (
+          <SidebarMenuItem className="mt-4 pt-4 border-t border-sidebar-border">
+            <Link href="/admin">
+                <SidebarMenuButton
+                isActive={pathname === '/admin'}
+                tooltip="Admin Portal"
+                className="text-primary font-bold"
+                >
+                <Lock />
+                <span>Admin Portal</span>
+                </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+      )}
     </SidebarMenu>
   );
 }

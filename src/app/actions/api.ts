@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -5,10 +6,11 @@
  * 
  * - Consolidates all transaction, gateway, and WhatsApp logic.
  * - Implements strict Zod validation, Integrity hashing, and Auth checks.
+ * - Includes Admin-level withdrawal management.
  */
 
 import { z } from 'zod';
-import { collection, addDoc, doc, updateDoc, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, getDocs, query, where, getDoc, collectionGroup } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 // --- SCHEMAS ---
@@ -154,13 +156,17 @@ export async function requestWithdrawal(hostId: string, eventId: string) {
   const platformFee = totalAmount * 0.02;
   const payoutAmount = totalAmount - platformFee;
 
-  // 4. Fetch Host UPI from Settings
+  // 4. Fetch Host info from Settings
   const hostRef = doc(firestore, `hosts/${hostId}`);
   const hostSnap = await getDoc(hostRef);
-  const hostUpi = hostSnap.data()?.upi || 'PENDING_SETUP';
+  const hostData = hostSnap.data();
+  const hostUpi = hostData?.upi || 'PENDING_SETUP';
+  const hostName = hostData?.name || 'Unknown Host';
 
   // 5. Create Withdrawal Record
   const withdrawalData = {
+    hostId,
+    hostName,
     eventId,
     eventName: eventData.eventName,
     totalAmount,
@@ -171,7 +177,7 @@ export async function requestWithdrawal(hostId: string, eventId: string) {
     hostUpi
   };
 
-  // 6. Write to Firestore (Now allowed by rules for verified platform logic)
+  // 6. Write to Firestore
   const withdrawalRef = collection(firestore, `hosts/${hostId}/withdrawals`);
   await addDoc(withdrawalRef, withdrawalData);
 
@@ -179,4 +185,23 @@ export async function requestWithdrawal(hostId: string, eventId: string) {
   await updateDoc(eventRef, { withdrawalRequested: true });
 
   return { success: true, payoutAmount };
+}
+
+/**
+ * ADMIN: UPDATE WITHDRAWAL STATUS
+ */
+export async function updateWithdrawalStatus(
+  hostId: string, 
+  withdrawalId: string, 
+  newStatus: 'Processing' | 'Completed' | 'Rejected'
+) {
+  const { firestore } = initializeFirebase();
+  const withdrawalRef = doc(firestore, `hosts/${hostId}/withdrawals`, withdrawalId);
+  
+  await updateDoc(withdrawalRef, {
+    status: newStatus,
+    processedDate: new Date().toISOString()
+  });
+
+  return { success: true };
 }

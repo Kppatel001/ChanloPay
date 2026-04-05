@@ -45,6 +45,8 @@ export type Host = {
 
 export type WithdrawalRequest = {
   id: string;
+  hostId: string;
+  hostName: string;
   eventId: string;
   eventName: string;
   totalAmount: number;
