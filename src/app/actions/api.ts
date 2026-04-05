@@ -158,9 +158,7 @@ export async function requestWithdrawal(hostId: string, eventId: string) {
   // 4. Fetch Host UPI from Settings
   const hostRef = doc(firestore, `hosts/${hostId}`);
   const hostSnap = await getDoc(hostRef);
-  const hostUpi = hostSnap.data()?.upi;
-
-  if (!hostUpi) throw new Error("Please set your UPI ID in Settings before withdrawing.");
+  const hostUpi = hostSnap.data()?.upi || 'PENDING_SETUP';
 
   // 5. Create Withdrawal Record
   const withdrawalData = {

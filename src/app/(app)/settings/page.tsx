@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { doc, setDoc } from 'firebase/firestore';
-import { Loader2, User, Phone } from 'lucide-react';
+import { Loader2, User, Phone, Wallet2, ShieldCheck } from 'lucide-react';
 
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { Header } from '@/components/layout/header';
@@ -41,6 +42,7 @@ const profileFormSchema = z.object({
     .min(10, 'Please enter a valid 10-digit mobile number.')
     .max(10, 'Please enter a valid 10-digit mobile number.')
     .regex(/^\d+$/, 'Mobile number must contain only digits.'),
+  upi: z.string().min(3, 'Enter a valid UPI ID for payouts.').optional().or(z.literal('')),
 });
 
 export default function SettingsPage() {
@@ -60,6 +62,7 @@ export default function SettingsPage() {
     defaultValues: {
       name: '',
       mobile: '',
+      upi: '',
     },
   });
 
@@ -68,6 +71,7 @@ export default function SettingsPage() {
       form.reset({
         name: hostProfile.name || '',
         mobile: hostProfile.mobile || '',
+        upi: hostProfile.upi || '',
       });
     }
   }, [hostProfile, form]);
@@ -84,7 +88,7 @@ export default function SettingsPage() {
       .then(() => {
         toast({
           title: 'Settings Saved',
-          description: 'Your host profile details have been updated.',
+          description: 'Your host profile and payout details have been updated.',
         });
       })
       .catch(async (serverError: any) => {
@@ -104,16 +108,16 @@ export default function SettingsPage() {
     <div className="flex min-h-screen w-full flex-col">
       <Header pageTitle="Settings" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Card className="w-full max-w-2xl shadow-md">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Card className="w-full max-w-2xl shadow-md border-primary/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-6 w-6" />
+                  <User className="h-6 w-6 text-primary" />
                   Host Profile
                 </CardTitle>
                 <CardDescription>
-                  Update your personal details. Payments are managed securely by the platform.
+                  Update your identity details. This helps us verify your account for security.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -143,7 +147,7 @@ export default function SettingsPage() {
                     className="bg-muted text-muted-foreground cursor-not-allowed"
                     value={user?.email ?? ''}
                   />
-                  <p className="text-xs text-muted-foreground">Contact support to change your email address.</p>
+                  <p className="text-xs text-muted-foreground">Used for security alerts and payout receipts.</p>
                 </div>
 
                 <FormField
@@ -163,15 +167,49 @@ export default function SettingsPage() {
                   )}
                 />
               </CardContent>
-              <CardFooter className="bg-muted/30 border-t py-4">
-                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </CardFooter>
-            </form>
-          </Form>
-        </Card>
+            </Card>
+
+            <Card className="w-full max-w-2xl shadow-md border-primary/10 bg-primary/5">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Wallet2 className="h-6 w-6 text-primary" />
+                        Payout Destination
+                    </CardTitle>
+                    <CardDescription>
+                        Where should the platform transfer your collected funds?
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="upi"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="font-bold">Your Bank UPI ID</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g. name@bank" {...field} className="bg-white" />
+                                </FormControl>
+                                <FormDescription>
+                                    All event collections (after 2% fee) will be sent to this ID.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div className="flex items-center gap-2 text-xs text-primary font-bold bg-primary/10 p-3 rounded-lg border border-primary/20">
+                        <ShieldCheck className="h-4 w-4" />
+                        Funds are held securely by ChanloPay until you request withdrawal.
+                    </div>
+                </CardContent>
+                <CardFooter className="border-t py-4">
+                    <Button type="submit" className="w-full sm:w-auto font-bold" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save All Settings
+                    </Button>
+                </CardFooter>
+            </Card>
+          </form>
+        </Form>
       </main>
     </div>
   );
