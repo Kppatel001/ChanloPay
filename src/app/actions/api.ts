@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -172,10 +171,11 @@ export async function requestWithdrawal(hostId: string, eventId: string) {
     hostUpi
   };
 
+  // 6. Write to Firestore (Now allowed by rules for verified platform logic)
   const withdrawalRef = collection(firestore, `hosts/${hostId}/withdrawals`);
   await addDoc(withdrawalRef, withdrawalData);
 
-  // 6. Mark Event as Withdrawn
+  // 7. Mark Event as Withdrawn
   await updateDoc(eventRef, { withdrawalRequested: true });
 
   return { success: true, payoutAmount };

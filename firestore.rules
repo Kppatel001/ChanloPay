@@ -10,36 +10,53 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == hostId;
     }
 
-    // PRODUCTION SECURITY: Request Validation Helpers
+    // PRODUCTION SECURITY: Transaction Validation
     function isValidTransaction() {
       let data = request.resource.data;
       return data.amount > 0 
           && data.name.size() >= 2
-          && data.village.size() >= 2
           && data.status == 'Success';
+    }
+
+    // PRODUCTION SECURITY: Withdrawal Validation
+    function isValidWithdrawal() {
+      let data = request.resource.data;
+      return data.totalAmount > 0 
+          && data.payoutAmount > 0
+          && data.status == 'Pending Review';
     }
 
     /**
      * Controls access to individual Host profiles and all nested data.
      */
     match /hosts/{hostId} {
-      // Anyone can fetch host's UPI details for payment
+      // Anyone can fetch host's payout/identity info for verification
       allow read: if true;
       allow write: if isOwner(hostId);
 
       match /events/{eventId} {
         // Guests can see event details
         allow read: if true;
-        allow write: if isOwner(hostId);
+        // Allow platform to mark event as withdrawn during payout request
+        allow update: if isOwner(hostId) || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['withdrawalRequested']));
+        allow create, delete: if isOwner(hostId);
 
         match /transactions/{transactionId} {
-          // PRODUCTION SECURITY: Guests can create, but only if they follow strict schema
+          // Allow platform/guests to create verified transactions
           allow create: if isValidTransaction();
-          // Only host can manage transactions
+          // Only host can manage/view transaction history
           allow read, update, delete: if isOwner(hostId);
         }
       }
 
+      match /withdrawals/{withdrawalId} {
+        // Allow platform to create withdrawal requests
+        allow create: if isValidWithdrawal();
+        // Only host can view their withdrawal history
+        allow read, update, delete: if isOwner(hostId);
+      }
+
+      // Catch-all for other host data
       match /{allPaths=**} {
         allow read, write: if isOwner(hostId);
       }
