@@ -35,11 +35,11 @@ service cloud.firestore {
      * Root Withdrawals Collection
      */
     match /withdrawals/{withdrawalId} {
-      // Admin can see everything
+      // Admin can see and process everything
       allow read, update: if isAdmin();
-      // Platform logic (Server Actions) can create
+      // Platform logic (Server Actions) can create requests
       allow create: if true; 
-      // Hosts can read their own
+      // Hosts can read their own request history
       allow read: if isSignedIn() && (resource == null || resource.data.hostId == request.auth.uid);
     }
 
@@ -47,28 +47,28 @@ service cloud.firestore {
      * Controls access to individual Host profiles and all nested data.
      */
     match /hosts/{hostId} {
-      // Anyone can fetch host's payout/identity info for verification
+      // Required for platform to fetch host's payout/identity info during withdrawal
       allow read: if true;
       allow write: if isOwner(hostId);
 
       match /events/{eventId} {
-        // Guests can see event details
+        // Guests can see event details to make payments
         allow read: if true;
-        // Allow platform to mark event as withdrawn during payout request
+        
+        // Allow platform logic to mark event as withdrawn
         allow update: if isOwner(hostId) || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['withdrawalRequested']));
         allow create, delete: if isOwner(hostId);
 
         match /transactions/{transactionId} {
           // Allow platform/guests to create verified transactions
           allow create: if isValidTransaction();
-          // Only host can manage/view transaction history
-          allow read, update, delete: if isOwner(hostId);
+          
+          // Allow reading transactions so the platform can sum totals for payouts
+          allow read: if true;
+          
+          // Only host can modify or delete their transaction records
+          allow update, delete: if isOwner(hostId);
         }
-      }
-
-      // Legacy path cleanup: restrict access
-      match /withdrawals/{withdrawalId} {
-        allow read, write: if isOwner(hostId);
       }
 
       // Catch-all for other host data
