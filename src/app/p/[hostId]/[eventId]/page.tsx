@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, use } from 'react';
@@ -15,6 +14,9 @@ import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { initiateSecureGuestPayment, finalizeGuestPayment } from '@/app/actions/api';
+
+// CENTRALIZED PLATFORM COLLECTION UPI
+const PLATFORM_UPI_ID = 'chanlopay@upi'; 
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
   const resolvedParams = use(params);
@@ -83,10 +85,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         language: language
       };
 
-      // 1. FIREWALL API: Initiate Order
       const order = await initiateSecureGuestPayment(transactionData);
 
-      // 2. FIREWALL API: Finalize and Record (Simulating Gateway return)
       await finalizeGuestPayment(
         order.orderId,
         order.integrityHash,
@@ -111,11 +111,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   };
 
   const handleCopyUpi = () => {
-    if (hostProfile?.upi) {
-      navigator.clipboard.writeText(hostProfile.upi);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    }
+    navigator.clipboard.writeText(PLATFORM_UPI_ID);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   if (hostLoading || eventLoading) {
@@ -139,7 +137,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     );
   }
 
-  const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || '')}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
+  const upiUri = `upi://pay?pa=${PLATFORM_UPI_ID}&pn=ChanloPay%20Central&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 flex flex-col items-center">
@@ -246,7 +244,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <CardHeader className="text-center bg-primary/5 rounded-t-lg">
               <CardTitle className="font-headline text-xl">Confirm & Record</CardTitle>
               <CardDescription>
-                Paying <span className="font-bold text-foreground">₹{amount}</span> to {hostProfile.name}
+                Paying <span className="font-bold text-foreground">₹{amount}</span> for <strong>{eventData.eventName}</strong>
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
@@ -280,9 +278,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
               <div className="flex items-center gap-3 bg-white p-4 rounded-xl border-2 border-amber-100 shadow-sm">
                 <div className="truncate flex-1">
-                  <p className="text-[10px] text-muted-foreground font-bold mb-1">UPI ID FOR MANUAL PAY</p>
+                  <p className="text-[10px] text-muted-foreground font-bold mb-1">PLATFORM UPI ID FOR MANUAL PAY</p>
                   <p className="text-sm font-mono font-bold text-primary truncate">
-                    {hostProfile.upi}
+                    {PLATFORM_UPI_ID}
                   </p>
                 </div>
                 <Button size="sm" className="h-10 gap-2 font-bold" onClick={handleCopyUpi}>

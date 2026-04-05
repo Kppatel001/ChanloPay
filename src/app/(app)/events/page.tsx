@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -21,19 +20,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/AlertDialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, QrCode, Loader2, Trash2, Plus, User as UserIcon, Share2, Printer, Info, Wallet, Users, Phone, Languages, Wallet2, TrendingUp } from 'lucide-react';
+import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, Wallet2, TrendingUp, Phone, Home, Languages } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -71,7 +59,6 @@ export default function EventsPage() {
   }, [user, firestore]);
   const { data: events, isLoading: eventsLoading } = useCollection<Event>(eventsQuery);
 
-  // Fetch stats (count and total) for events
   useEffect(() => {
     if (!user || !firestore || !events) return;
 
@@ -98,7 +85,6 @@ export default function EventsPage() {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState<string | null>(null);
 
-  // Recording transaction state
   const [guestName, setGuestName] = useState('');
   const [villageName, setVillageName] = useState('');
   const [guestMobile, setGuestMobile] = useState('');
@@ -108,12 +94,12 @@ export default function EventsPage() {
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   
   const handleOpenCreateEventDialog = () => {
-    const isProfileComplete = !!(hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi);
+    const isProfileComplete = !!(hostProfile && hostProfile.name && hostProfile.mobile);
     if (!isProfileComplete) {
         toast({
             variant: 'destructive',
             title: 'Profile Incomplete',
-            description: 'Please add your UPI ID in Settings to receive payouts.',
+            description: 'Please complete your host profile in Settings.',
         });
         return;
     }

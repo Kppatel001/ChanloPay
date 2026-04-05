@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { doc, setDoc } from 'firebase/firestore';
-import { Loader2, User, Phone, Wallet } from 'lucide-react';
+import { Loader2, User, Phone } from 'lucide-react';
 
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { Header } from '@/components/layout/header';
@@ -41,7 +41,6 @@ const profileFormSchema = z.object({
     .min(10, 'Please enter a valid 10-digit mobile number.')
     .max(10, 'Please enter a valid 10-digit mobile number.')
     .regex(/^\d+$/, 'Mobile number must contain only digits.'),
-  upi: z.string().min(3, 'Please enter a valid UPI ID (e.g. name@bank).'),
 });
 
 export default function SettingsPage() {
@@ -61,7 +60,6 @@ export default function SettingsPage() {
     defaultValues: {
       name: '',
       mobile: '',
-      upi: '',
     },
   });
 
@@ -70,7 +68,6 @@ export default function SettingsPage() {
       form.reset({
         name: hostProfile.name || '',
         mobile: hostProfile.mobile || '',
-        upi: hostProfile.upi || '',
       });
     }
   }, [hostProfile, form]);
@@ -80,7 +77,6 @@ export default function SettingsPage() {
     setIsSubmitting(true);
     const hostDocRef = doc(firestore, `hosts/${user.uid}`);
 
-    // We merge the changes to avoid overwriting uneditable fields like email or registrationDate
     setDoc(hostDocRef, {
       ...values,
       id: user.uid,
@@ -88,7 +84,7 @@ export default function SettingsPage() {
       .then(() => {
         toast({
           title: 'Settings Saved',
-          description: 'Your host profile and payment details have been updated.',
+          description: 'Your host profile details have been updated.',
         });
       })
       .catch(async (serverError: any) => {
@@ -117,7 +113,7 @@ export default function SettingsPage() {
                   Host Profile
                 </CardTitle>
                 <CardDescription>
-                  Your payment details are used to generate QR codes for your events. Ensure your UPI ID is correct to receive payments.
+                  Update your personal details. Payments are managed securely by the platform.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -162,26 +158,6 @@ export default function SettingsPage() {
                       <FormControl>
                         <Input type="tel" placeholder="10-digit mobile number" {...field} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="upi"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Wallet className="h-4 w-4 opacity-70" />
-                        UPI ID (VPA)
-                      </FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., yourname@okaxis" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        This UPI ID will be used for all event QR codes.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
