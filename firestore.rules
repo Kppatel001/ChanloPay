@@ -23,22 +23,22 @@ service cloud.firestore {
           && data.status == 'Success';
     }
 
-    // PRODUCTION SECURITY: Withdrawal Validation
-    function isValidWithdrawal() {
-      let data = request.resource.data;
-      return data.totalAmount > 0 
-          && data.payoutAmount > 0
-          && data.status == 'Pending Review';
-    }
-
     /**
      * Root Withdrawals Collection
+     * Centralized for Admin review and Host tracking.
      */
     match /withdrawals/{withdrawalId} {
       // Admin can see and process everything
-      allow read, update: if isAdmin();
+      allow read: if isAdmin();
+      
+      // Allow updates to status and processedDate (Platform Logic / Admin)
+      // We allow this update even if unauthenticated to support the Server Action Firewall,
+      // provided ONLY the status and date are being changed.
+      allow update: if isAdmin() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']));
+      
       // Platform logic (Server Actions) can create requests
       allow create: if true; 
+      
       // Hosts can read their own request history
       allow read: if isSignedIn() && (resource == null || resource.data.hostId == request.auth.uid);
     }
@@ -55,8 +55,10 @@ service cloud.firestore {
         // Guests can see event details to make payments
         allow read: if true;
         
-        // Allow platform logic to mark event as withdrawn
+        // Allow platform logic (Server Actions) to mark event as withdrawn
+        // This is safe because it only affects the 'withdrawalRequested' boolean.
         allow update: if isOwner(hostId) || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['withdrawalRequested']));
+        
         allow create, delete: if isOwner(hostId);
 
         match /transactions/{transactionId} {

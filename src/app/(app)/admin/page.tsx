@@ -43,7 +43,7 @@ export default function AdminPage() {
         return;
     }
 
-    // Standard collection query on root "withdrawals" (No composite index needed for single field orderBy)
+    // Standard collection query on root "withdrawals"
     const q = query(collection(firestore, 'withdrawals'), orderBy('requestDate', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
@@ -61,7 +61,7 @@ export default function AdminPage() {
     return () => unsubscribe();
   }, [firestore, user]);
 
-  const handleUpdateStatus = async (hostId: string, withdrawalId: string, status: any) => {
+  const handleUpdateStatus = async (hostId: string, withdrawalId: string, status: 'Processing' | 'Completed' | 'Rejected') => {
     setProcessingId(withdrawalId);
     try {
       await updateWithdrawalStatus(hostId, withdrawalId, status);
@@ -93,7 +93,7 @@ export default function AdminPage() {
   }
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-IN', { style: IndianRupee ? 'currency' : 'decimal', currency: 'INR' }).format(amount);
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/5">
@@ -178,7 +178,7 @@ export default function AdminPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {req.status === 'Pending Review' ? (
+                                        {req.status === 'Pending Review' || req.status === 'Processing' ? (
                                             <div className="flex justify-end gap-2">
                                                 <Button 
                                                     size="sm" 
@@ -206,7 +206,9 @@ export default function AdminPage() {
                                                     {req.status === 'Completed' ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                                                     Record {req.status}
                                                 </span>
-                                                <span className="text-[9px] text-muted-foreground font-bold">Actioned on {new Date().toLocaleDateString()}</span>
+                                                {req.processedDate && (
+                                                    <span className="text-[9px] text-muted-foreground font-bold">Actioned on {new Date(req.processedDate).toLocaleDateString()}</span>
+                                                )}
                                             </div>
                                         )}
                                     </TableCell>
