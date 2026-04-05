@@ -79,10 +79,10 @@ export function SidebarNav() {
                 <SidebarMenuButton
                 isActive={pathname === '/admin'}
                 tooltip="Admin Portal"
-                className="text-primary font-bold"
+                className="text-primary font-bold hover:bg-primary/10"
                 >
-                <Lock />
-                <span>Admin Portal</span>
+                <Lock className="text-primary" />
+                <span className="text-primary uppercase tracking-tighter font-black">Admin Portal</span>
                 </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
