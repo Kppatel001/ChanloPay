@@ -1,6 +1,6 @@
+
 'use client';
 
-import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/header';
 import {
@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, Wallet2, TrendingUp, Phone, Home, Languages } from 'lucide-react';
+import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,7 +32,7 @@ import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc, ge
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { recordManualEntry, requestWithdrawal } from '@/app/actions/api';
+import { recordManualEntry } from '@/app/actions/api';
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -83,7 +83,6 @@ export default function EventsPage() {
   const [newEventName, setNewEventName] = useState('');
   const [newEventLocation, setNewEventLocation] = useState('');
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
-  const [isWithdrawing, setIsWithdrawing] = useState<string | null>(null);
 
   const [guestName, setGuestName] = useState('');
   const [villageName, setVillageName] = useState('');
@@ -129,22 +128,6 @@ export default function EventsPage() {
     }).catch(async () => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: collectionRef.path, operation: 'create' }));
     }).finally(() => setIsCreatingEvent(false));
-  };
-
-  const handleWithdrawFunds = async (event: Event) => {
-    if (!user || !event.id) return;
-    setIsWithdrawing(event.id);
-    try {
-      const result = await requestWithdrawal(user.uid, event.id);
-      toast({
-        title: "Withdrawal Requested",
-        description: `₹${result.payoutAmount.toFixed(2)} payout submitted for review.`,
-      });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Withdrawal Failed', description: err.message });
-    } finally {
-      setIsWithdrawing(null);
-    }
   };
 
   const handleRecordTransaction = async (event: Event) => {
@@ -235,18 +218,13 @@ export default function EventsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {events && events.map((event) => {
             const stats = eventStats[event.id!] || { count: 0, total: 0 };
-            const canWithdraw = stats.total > 0 && !event.withdrawalRequested;
 
             return (
               <Card key={event.id} className="relative overflow-hidden border-primary/20 shadow-md">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="truncate">{event.eventName}</CardTitle>
-                    {event.withdrawalRequested ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700">Withdrawn</Badge>
-                    ) : (
-                        <Badge variant="outline" className="text-[10px]">{stats.count} Records</Badge>
-                    )}
+                    <Badge variant="outline" className="text-[10px]">{stats.count} Records</Badge>
                   </div>
                   <div className="space-y-1 mt-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> {new Date(event.eventDate).toLocaleDateString()}</div>
@@ -261,22 +239,6 @@ export default function EventsPage() {
                     </div>
                     <TrendingUp className="h-8 w-8 text-primary opacity-20" />
                   </div>
-                  
-                  {canWithdraw && (
-                    <Button 
-                      className="w-full font-bold shadow-lg shadow-primary/10" 
-                      onClick={() => handleWithdrawFunds(event)}
-                      disabled={isWithdrawing === event.id}
-                    >
-                      {isWithdrawing === event.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet2 className="mr-2 h-4 w-4" />}
-                      Request Payout (98%)
-                    </Button>
-                  )}
-                  {event.withdrawalRequested && (
-                    <Button className="w-full" variant="outline" disabled>
-                       Processing Withdrawal
-                    </Button>
-                  )}
                 </CardContent>
                 <CardFooter className="flex gap-2 border-t pt-4">
                   <Dialog>

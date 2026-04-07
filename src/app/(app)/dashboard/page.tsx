@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from 'react';
 import { Header } from '@/components/layout/header';
-import { StatsCards } from '@/components/dashboard/stats-cards';
 import {
   Card,
   CardContent,
@@ -92,14 +91,8 @@ export default function DashboardPage() {
   const totalCollected = transactions.reduce((sum, t) => sum + t.amount, 0);
   const eventsCount = events?.length ?? 0;
 
-  // Wallet Logic: Only show balance for events where withdrawal HAS NOT been requested
-  const walletBalance = events?.reduce((acc, event) => {
-      if (event.withdrawalRequested) return acc;
-      const eventTotal = transactions
-        .filter(t => t.eventName === event.eventName)
-        .reduce((sum, t) => sum + t.amount, 0);
-      return acc + eventTotal;
-  }, 0) || 0;
+  // Wallet Logic: Showing total collected balance
+  const walletBalance = totalCollected;
 
   // Chart Data
   const monthlyRevenue = transactions.reduce((acc, transaction) => {
@@ -126,7 +119,7 @@ export default function DashboardPage() {
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2 text-primary-foreground">
                         <Wallet2 className="h-4 w-4" />
-                        Wallet Balance
+                        Total Balance
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -161,10 +154,10 @@ export default function DashboardPage() {
 
             <Card className="border-primary/10 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Fee Rate</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Platform Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-primary">2.0%</div>
+                    <div className="text-2xl font-bold text-primary">Live</div>
                 </CardContent>
             </Card>
         </div>

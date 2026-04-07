@@ -6,11 +6,10 @@
  * 
  * - Consolidates all transaction, gateway, and WhatsApp logic.
  * - Implements strict Zod validation, Integrity hashing, and Auth checks.
- * - Includes Admin-level withdrawal management.
  */
 
 import { z } from 'zod';
-import { collection, addDoc, doc, updateDoc, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 // --- SCHEMAS ---
@@ -123,86 +122,4 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
   await addDoc(txnRef, transactionData);
 
   return { success: true, receiptId };
-}
-
-/**
- * SECURE WITHDRAWAL REQUEST (PLATFORM LOGIC)
- */
-export async function requestWithdrawal(hostId: string, eventId: string) {
-  const { firestore } = initializeFirebase();
-  
-  // 1. Verify Event ownership and fetch data
-  const eventRef = doc(firestore, `hosts/${hostId}/events/${eventId}`);
-  const eventSnap = await getDoc(eventRef);
-  
-  if (!eventSnap.exists()) throw new Error("Event not found.");
-  const eventData = eventSnap.data();
-  
-  if (eventData.withdrawalRequested) throw new Error("Withdrawal already requested for this event.");
-
-  // 2. Fetch all successful transactions for this event
-  const txnRef = collection(firestore, `hosts/${hostId}/events/${eventId}/transactions`);
-  const q = query(txnRef, where("status", "==", "Success"));
-  const querySnapshot = await getDocs(q);
-  
-  let totalAmount = 0;
-  querySnapshot.forEach((doc) => {
-    totalAmount += doc.data().amount || 0;
-  });
-
-  if (totalAmount <= 0) throw new Error("No funds available to withdraw.");
-
-  // 3. Calculate Fee (2%)
-  const platformFee = totalAmount * 0.02;
-  const payoutAmount = totalAmount - platformFee;
-
-  // 4. Fetch Host info from Settings
-  const hostRef = doc(firestore, `hosts/${hostId}`);
-  const hostSnap = await getDoc(hostRef);
-  const hostData = hostSnap.data();
-  const hostUpi = hostData?.upi || 'PENDING_SETUP';
-  const hostName = hostData?.name || 'Unknown Host';
-
-  // 5. Create Withdrawal Record in ROOT collection
-  const withdrawalData = {
-    hostId,
-    hostName,
-    eventId,
-    eventName: eventData.eventName,
-    totalAmount,
-    platformFee,
-    payoutAmount,
-    status: 'Pending Review',
-    requestDate: new Date().toISOString(),
-    hostUpi
-  };
-
-  // 6. Write to Firestore root collection (Fixes Collection Group Indexing requirements)
-  const withdrawalRef = collection(firestore, `withdrawals`);
-  await addDoc(withdrawalRef, withdrawalData);
-
-  // 7. Mark Event as Withdrawn
-  await updateDoc(eventRef, { withdrawalRequested: true });
-
-  return { success: true, payoutAmount };
-}
-
-/**
- * ADMIN: UPDATE WITHDRAWAL STATUS
- */
-export async function updateWithdrawalStatus(
-  hostId: string, 
-  withdrawalId: string, 
-  newStatus: 'Processing' | 'Completed' | 'Rejected'
-) {
-  const { firestore } = initializeFirebase();
-  // Update in root withdrawals collection
-  const withdrawalRef = doc(firestore, `withdrawals`, withdrawalId);
-  
-  await updateDoc(withdrawalRef, {
-    status: newStatus,
-    processedDate: new Date().toISOString()
-  });
-
-  return { success: true };
 }
