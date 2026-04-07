@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -189,9 +188,6 @@ export default function SettingsPage() {
                                 <FormControl>
                                     <Input placeholder="e.g. name@bank" {...field} className="bg-white" />
                                 </FormControl>
-                                <FormDescription>
-                                    All event collections (after 2% fee) will be sent to this ID.
-                                </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
