@@ -88,6 +88,11 @@
         "withdrawalRequested": {
           "type": "boolean",
           "description": "Whether a withdrawal has been requested for this event."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Live", "Completed"],
+          "description": "Current status of the event."
         }
       },
       "required": [

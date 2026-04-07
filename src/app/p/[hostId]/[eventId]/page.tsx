@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, CreditCard, Copy, Check, ExternalLink, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, CreditCard, Copy, Check, ExternalLink, Sparkles, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -47,6 +47,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
+    if (eventData?.status === 'Completed') return;
+
     if (!guestName.trim()) {
       toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter your full name.' });
       return;
@@ -73,6 +75,11 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       return;
     }
 
+    if (eventData.status === 'Completed') {
+      toast({ variant: 'destructive', title: 'Event Closed', description: 'This event is no longer accepting payments.' });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -88,13 +95,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         language: language
       };
 
-      // 1. Log the intent in backend firewall
       const order = await initiateSecureGuestPayment(transactionData);
-
-      // 2. Build the Deep Link URI DIRECT TO HOST
       const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Event Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
 
-      // 3. Log the record (Smart Tracking)
       await finalizeGuestPayment(
         order.orderId,
         order.integrityHash,
@@ -102,14 +105,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         eventData.eventName
       );
 
-      // 4. Trigger Deep Link
       window.location.href = upiUri;
-
       setIsFinalized(true);
-      toast({
-        title: 'Opening UPI App...',
-        description: 'Complete the payment in your preferred app.',
-      });
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -149,6 +146,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     );
   }
 
+  const isCompleted = eventData.status === 'Completed';
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 flex flex-col items-center">
       <div className="w-full max-w-md flex flex-col items-center">
@@ -157,7 +156,23 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
           <h1 className="font-headline text-2xl font-bold">ChanloPay</h1>
         </div>
 
-        {isFinalized ? (
+        {isCompleted && !isFinalized ? (
+          <Card className="w-full shadow-lg border-destructive/20 bg-destructive/5">
+            <CardHeader className="text-center">
+              <div className="mx-auto bg-destructive/10 text-destructive p-3 rounded-full w-fit mb-2">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+              <CardTitle className="font-headline text-2xl text-destructive">Registry Closed</CardTitle>
+              <CardDescription className="font-body">
+                This event (<strong>{eventData.eventName}</strong>) has been completed and is no longer accepting digital shagun.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">Please contact the host <strong>{hostProfile.name}</strong> if you believe this is an error.</p>
+              <Button variant="outline" className="w-full" onClick={() => window.history.back()}>Go Back</Button>
+            </CardContent>
+          </Card>
+        ) : isFinalized ? (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
             <CardHeader className="text-center">
               <div className="mx-auto bg-green-100 text-green-600 p-2 rounded-full w-fit mb-2">

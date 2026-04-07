@@ -21,14 +21,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp, Wallet2, CheckCircle2 } from 'lucide-react';
+import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp, Wallet2, CheckCircle2, PlayCircle, StopCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc, getDocs, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc, getDocs, where, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -95,7 +94,6 @@ export default function EventsPage() {
   const [isWithdrawing, setIsWithdrawing] = useState<string | null>(null);
   
   const handleOpenCreateEventDialog = () => {
-    // Check for complete profile including UPI ID for QR creation
     const isProfileComplete = !!(hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi);
     if (!isProfileComplete) {
         toast({
@@ -117,20 +115,32 @@ export default function EventsPage() {
       eventName: newEventName.trim(),
       eventDate: new Date().toISOString(),
       location: newEventLocation.trim(),
-      qrCode: 'PLATFORM_UPI', // Centralized Collection Mode
+      qrCode: 'PLATFORM_UPI',
       createdAt: serverTimestamp(),
       withdrawalRequested: false,
+      status: 'Live'
     };
     
     const collectionRef = collection(firestore, `hosts/${user.uid}/events`);
     addDoc(collectionRef, newEvent).then(() => {
-      toast({ title: "Event Created!", description: `${newEvent.eventName} is now live and collecting via ChanloPay.` });
+      toast({ title: "Event Created!", description: `${newEvent.eventName} is now live.` });
       setNewEventName('');
       setNewEventLocation('');
       setCreateDialogOpen(false);
     }).catch(async () => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: collectionRef.path, operation: 'create' }));
     }).finally(() => setIsCreatingEvent(false));
+  };
+
+  const handleUpdateStatus = async (eventId: string, status: 'Live' | 'Completed') => {
+    if (!user || !firestore) return;
+    const eventRef = doc(firestore, `hosts/${user.uid}/events`, eventId);
+    try {
+      await updateDoc(eventRef, { status });
+      toast({ title: status === 'Live' ? 'Event Live' : 'Event Completed', description: `Status updated to ${status}.` });
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update status.' });
+    }
   };
 
   const handleRecordTransaction = async (event: Event) => {
@@ -173,6 +183,11 @@ export default function EventsPage() {
     if (!stats || stats.total <= 0 || !user || !hostProfile?.upi || !event.id) {
         toast({ variant: 'destructive', title: 'Withdrawal Error', description: 'No funds or missing UPI ID in settings.' });
         return;
+    }
+
+    if (event.status !== 'Completed') {
+      toast({ variant: 'destructive', title: 'Event Still Live', description: 'Please mark the event as Completed before requesting withdrawal.' });
+      return;
     }
 
     setIsWithdrawing(event.id);
@@ -248,12 +263,18 @@ export default function EventsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {events && events.map((event) => {
             const stats = eventStats[event.id!] || { count: 0, total: 0 };
+            const isLive = event.status !== 'Completed';
 
             return (
-              <Card key={event.id} className="relative overflow-hidden border-primary/20 shadow-md">
+              <Card key={event.id} className={`relative overflow-hidden border-primary/20 shadow-md ${!isLive ? 'bg-muted/5 opacity-80' : ''}`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <CardTitle className="truncate">{event.eventName}</CardTitle>
+                    <div>
+                      <CardTitle className="truncate">{event.eventName}</CardTitle>
+                      <Badge variant={isLive ? "default" : "secondary"} className="mt-1 text-[9px] uppercase tracking-wider">
+                        {isLive ? 'Live' : 'Completed'}
+                      </Badge>
+                    </div>
                     <Badge variant="outline" className="text-[10px]">{stats.count} Records</Badge>
                   </div>
                   <div className="space-y-1 mt-2 text-sm text-muted-foreground">
@@ -312,9 +333,20 @@ export default function EventsPage() {
                         </div>
                         </DialogContent>
                     </Dialog>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteEvent(event.id!)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex gap-1">
+                      {isLive ? (
+                        <Button variant="secondary" size="icon" className="h-10 w-10 text-amber-600" title="Mark Completed" onClick={() => handleUpdateStatus(event.id!, 'Completed')}>
+                          <StopCircle className="h-5 w-5" />
+                        </Button>
+                      ) : (
+                        <Button variant="secondary" size="icon" className="h-10 w-10 text-green-600" title="Go Live" onClick={() => handleUpdateStatus(event.id!, 'Live')}>
+                          <PlayCircle className="h-5 w-5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => handleDeleteEvent(event.id!)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
 
                   {event.withdrawalRequested ? (
@@ -325,12 +357,12 @@ export default function EventsPage() {
                   ) : (
                     <Button 
                         className="w-full font-bold uppercase tracking-wider text-[10px]" 
-                        variant="secondary" 
+                        variant={!isLive ? "default" : "secondary"}
                         onClick={() => handleWithdraw(event)}
                         disabled={isWithdrawing === event.id || stats.total <= 0}
                     >
                         {isWithdrawing === event.id ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Wallet2 className="h-3 w-3 mr-2" />}
-                        Request Withdrawal (Full Amount)
+                        {isLive ? "Mark Completed to Withdraw" : "Request Withdrawal"}
                     </Button>
                   )}
                 </CardFooter>

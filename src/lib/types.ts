@@ -36,6 +36,7 @@ export type Event = {
   createdAt?: FieldValue;
   withdrawalRequested?: boolean;
   totalCollected?: number;
+  status?: 'Live' | 'Completed';
 };
 
 export type Host = {
