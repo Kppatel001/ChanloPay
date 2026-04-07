@@ -15,7 +15,7 @@ import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import type { Event, Transaction } from '@/lib/types';
-import { Wallet2, ShieldCheck, TrendingUp } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, TrendingUp, Calendar } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -91,9 +91,6 @@ export default function DashboardPage() {
   const totalCollected = transactions.reduce((sum, t) => sum + t.amount, 0);
   const eventsCount = events?.length ?? 0;
 
-  // Wallet Logic: Showing total collected balance
-  const walletBalance = totalCollected;
-
   // Chart Data
   const monthlyRevenue = transactions.reduce((acc, transaction) => {
     const month = transaction.date.toLocaleString('default', { month: 'short' });
@@ -108,25 +105,25 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <Header pageTitle="Platform Dashboard" />
+      <Header pageTitle="Host Dashboard" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-2 opacity-10">
-                    <Wallet2 className="h-24 w-24" />
+                    <CheckCircle2 className="h-24 w-24" />
                 </div>
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2 text-primary-foreground">
-                        <Wallet2 className="h-4 w-4" />
-                        Total Balance
+                        <TrendingUp className="h-4 w-4" />
+                        Total Shagun Collected
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-3xl font-black">{formatCurrency(walletBalance)}</div>
+                    <div className="text-3xl font-black">{formatCurrency(totalCollected)}</div>
                     <p className="text-[10px] mt-2 opacity-70 flex items-center gap-1">
                         <ShieldCheck className="h-3 w-3" />
-                        Secured by ChanloPay Platform
+                        Direct Settlement Active
                     </p>
                 </CardContent>
             </Card>
@@ -134,21 +131,21 @@ export default function DashboardPage() {
             <Card className="border-primary/10 shadow-md">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        Total Lifetime
+                        <Calendar className="h-4 w-4" />
+                        Active Events
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(totalCollected)}</div>
+                    <div className="text-2xl font-bold">{eventsCount}</div>
                 </CardContent>
             </Card>
 
             <Card className="border-primary/10 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Active Events</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Recent Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{eventsCount}</div>
+                    <div className="text-2xl font-bold">{transactions.length}</div>
                 </CardContent>
             </Card>
 
@@ -165,8 +162,8 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card className="lg:col-span-4 border-primary/10">
             <CardHeader>
-              <CardTitle>Collection Growth</CardTitle>
-              <CardDescription>Monthly platform collection trends.</CardDescription>
+              <CardTitle>Collection Trends</CardTitle>
+              <CardDescription>Monthly growth of your digital registry.</CardDescription>
             </CardHeader>
             <CardContent>
               <OverviewChart data={chartData} isLoading={isLoading} />

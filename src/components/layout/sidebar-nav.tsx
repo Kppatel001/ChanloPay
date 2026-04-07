@@ -14,38 +14,51 @@ import {
   CalendarPlus,
   ShieldCheck,
   Settings,
+  ShieldAlert,
 } from 'lucide-react';
-
-const navItems = [
-  {
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    label: 'Dashboard',
-  },
-  {
-    href: '/transactions',
-    icon: ReceiptText,
-    label: 'Transactions',
-  },
-  {
-    href: '/events',
-    icon: CalendarPlus,
-    label: 'Events',
-  },
-  {
-    href: '/fraud-detection',
-    icon: ShieldCheck,
-    label: 'Fraud Detection',
-  },
-  {
-    href: '/settings',
-    icon: Settings,
-    label: 'Settings',
-  },
-];
+import { useUser } from '@/firebase';
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user } = useUser();
+
+  const isAdmin = user?.email === 'admin@chanlopay.com';
+
+  const navItems = [
+    {
+      href: '/dashboard',
+      icon: LayoutDashboard,
+      label: 'Dashboard',
+    },
+    {
+      href: '/transactions',
+      icon: ReceiptText,
+      label: 'Transactions',
+    },
+    {
+      href: '/events',
+      icon: CalendarPlus,
+      label: 'Events',
+    },
+    {
+      href: '/fraud-detection',
+      icon: ShieldCheck,
+      label: 'Fraud Detection',
+    },
+    {
+      href: '/settings',
+      icon: Settings,
+      label: 'Settings',
+    },
+  ];
+
+  if (isAdmin) {
+    navItems.push({
+      href: '/admin',
+      icon: ShieldAlert,
+      label: 'Admin Portal',
+    });
+  }
 
   return (
     <SidebarMenu>
