@@ -32,8 +32,6 @@ service cloud.firestore {
       allow read: if isAdmin();
       
       // Allow updates to status and processedDate (Platform Logic / Admin)
-      // We allow this update even if unauthenticated to support the Server Action Firewall,
-      // provided ONLY the status and date are being changed.
       allow update: if isAdmin() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']));
       
       // Platform logic (Server Actions) can create requests
@@ -47,8 +45,8 @@ service cloud.firestore {
      * Controls access to individual Host profiles and all nested data.
      */
     match /hosts/{hostId} {
-      // Required for platform to fetch host's payout/identity info during withdrawal
-      allow read: if true;
+      // Admin can see all hosts
+      allow read: if isAdmin() || isOwner(hostId);
       allow write: if isOwner(hostId);
 
       match /events/{eventId} {
@@ -56,7 +54,6 @@ service cloud.firestore {
         allow read: if true;
         
         // Allow platform logic (Server Actions) to mark event as withdrawn
-        // This is safe because it only affects the 'withdrawalRequested' boolean.
         allow update: if isOwner(hostId) || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['withdrawalRequested']));
         
         allow create, delete: if isOwner(hostId);
@@ -69,14 +66,24 @@ service cloud.firestore {
           allow read: if true;
           
           // Only host can modify or delete their transaction records
-          allow update, delete: if isOwner(hostId);
+          // Admin can update for verification purposes
+          allow update: if isOwner(hostId) || isAdmin();
+          allow delete: if isOwner(hostId);
         }
       }
 
       // Catch-all for other host data
       match /{allPaths=**} {
-        allow read, write: if isOwner(hostId);
+        allow read, write: if isOwner(hostId) || isAdmin();
       }
+    }
+    
+    // Collection Group Rules for Admin Portals
+    match /{path=**}/events/{eventId} {
+      allow read: if isAdmin();
+    }
+    match /{path=**}/transactions/{transactionId} {
+      allow read: if isAdmin();
     }
   }
 }

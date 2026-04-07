@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp } from 'lucide-react';
+import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp, Wallet2, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,7 +32,7 @@ import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc, ge
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { recordManualEntry } from '@/app/actions/api';
+import { recordManualEntry, requestWithdrawal } from '@/app/actions/api';
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -59,24 +59,25 @@ export default function EventsPage() {
   }, [user, firestore]);
   const { data: events, isLoading: eventsLoading } = useCollection<Event>(eventsQuery);
 
-  useEffect(() => {
+  const fetchStats = async () => {
     if (!user || !firestore || !events) return;
-
-    events.forEach(async (event) => {
+    for (const event of events) {
       if (event.id) {
         const txnRef = collection(firestore, `hosts/${user.uid}/events/${event.id}/transactions`);
         const q = query(txnRef, where("status", "==", "Success"));
         const snapshot = await getDocs(q);
-        
         let total = 0;
         snapshot.forEach(d => total += (d.data().amount || 0));
-        
         setEventStats(prev => ({ 
           ...prev, 
           [event.id!]: { count: snapshot.size, total: total } 
         }));
       }
-    });
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
   }, [user, firestore, events]);
 
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -91,6 +92,7 @@ export default function EventsPage() {
   const [guestType, setGuestType] = useState('Gift');
   const [guestLanguage, setGuestLanguage] = useState('en');
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState<string | null>(null);
   
   const handleOpenCreateEventDialog = () => {
     // Check for complete profile including UPI ID for QR creation
@@ -115,14 +117,14 @@ export default function EventsPage() {
       eventName: newEventName.trim(),
       eventDate: new Date().toISOString(),
       location: newEventLocation.trim(),
-      qrCode: hostProfile.upi || 'PENDING',
+      qrCode: 'PLATFORM_UPI', // Centralized Collection Mode
       createdAt: serverTimestamp(),
       withdrawalRequested: false,
     };
     
     const collectionRef = collection(firestore, `hosts/${user.uid}/events`);
     addDoc(collectionRef, newEvent).then(() => {
-      toast({ title: "Event Created!", description: `${newEvent.eventName} is now live with your UPI QR.` });
+      toast({ title: "Event Created!", description: `${newEvent.eventName} is now live and collecting via ChanloPay.` });
       setNewEventName('');
       setNewEventLocation('');
       setCreateDialogOpen(false);
@@ -148,7 +150,8 @@ export default function EventsPage() {
         amount: amount,
         paymentMethod: 'Cash',
         type: guestType as any,
-        language: guestLanguage as any
+        language: guestLanguage as any,
+        isManualEntry: true
       }, event.eventName);
 
       toast({ title: "Payment Recorded", description: "Receipt triggered via WhatsApp." });
@@ -157,10 +160,36 @@ export default function EventsPage() {
       setGuestMobile('');
       setGuestAmount('');
       setGuestType('Gift');
+      fetchStats();
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'API Error', description: err.message });
     } finally {
       setIsRecordingTransaction(false);
+    }
+  };
+
+  const handleWithdraw = async (event: Event) => {
+    const stats = eventStats[event.id!];
+    if (!stats || stats.total <= 0 || !user || !hostProfile?.upi || !event.id) {
+        toast({ variant: 'destructive', title: 'Withdrawal Error', description: 'No funds or missing UPI ID in settings.' });
+        return;
+    }
+
+    setIsWithdrawing(event.id);
+    try {
+        await requestWithdrawal({
+            hostId: user.uid,
+            eventId: event.id,
+            hostName: hostProfile.name || 'Host',
+            eventName: event.eventName,
+            totalAmount: stats.total,
+            hostUpi: hostProfile.upi
+        });
+        toast({ title: 'Withdrawal Requested', description: 'Your payout is being processed (48-72h).' });
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: 'Error', description: err.message });
+    } finally {
+        setIsWithdrawing(null);
     }
   };
 
@@ -192,7 +221,7 @@ export default function EventsPage() {
               <DialogHeader>
                 <DialogTitle>Start New Event</DialogTitle>
                 <DialogDescription>
-                  Money will be sent directly to your UPI ID: <strong>{hostProfile?.upi}</strong>
+                  Money will be collected into the ChanloPay Platform account for security.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -235,56 +264,75 @@ export default function EventsPage() {
                 <CardContent className="space-y-4">
                   <div className="bg-muted/50 p-4 rounded-lg border flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Direct Collection</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Platform Collection</p>
                       <p className="text-xl font-black text-primary">{formatCurrency(stats.total)}</p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-primary opacity-20" />
                   </div>
                 </CardContent>
-                <CardFooter className="flex gap-2 border-t pt-4">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="flex-1">Manage</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Event Controls</DialogTitle>
-                        <DialogDescription>Record cash or share payment link.</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                            <p className="text-xs font-bold text-primary mb-2">Guest Payment Link</p>
-                            <div className="flex items-center gap-2">
-                                <Input value={`${origin}/p/${user?.uid}/${event.id}`} readOnly className="text-xs h-8" />
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                                    navigator.clipboard.writeText(`${origin}/p/${user?.uid}/${event.id}`);
-                                    toast({ title: "Link Copied" });
-                                }}>
-                                    <Share2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <p className="text-xs font-bold uppercase text-muted-foreground">Manual Cash Record</p>
-                            <div className="grid gap-2">
-                                <Input placeholder="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
-                                <Input placeholder="Village" value={villageName} onChange={(e) => setVillageName(e.target.value)} />
-                                <div className="flex gap-2">
-                                    <Input placeholder="Amount (₹)" type="number" value={guestAmount} onChange={(e) => setGuestAmount(e.target.value)} />
-                                    <Input placeholder="Mobile (WA)" value={guestMobile} onChange={(e) => setGuestMobile(e.target.value)} maxLength={10} />
+                <CardFooter className="flex flex-col gap-2 border-t pt-4">
+                  <div className="flex w-full gap-2">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                        <Button variant="outline" className="flex-1">Manage</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Event Controls</DialogTitle>
+                            <DialogDescription>Record cash or share payment link.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                                <p className="text-xs font-bold text-primary mb-2">Guest Payment Link</p>
+                                <div className="flex items-center gap-2">
+                                    <Input value={`${origin}/p/${user?.uid}/${event.id}`} readOnly className="text-xs h-8" />
+                                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                                        navigator.clipboard.writeText(`${origin}/p/${user?.uid}/${event.id}`);
+                                        toast({ title: "Link Copied" });
+                                    }}>
+                                        <Share2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <Button className="w-full" size="sm" onClick={() => handleRecordTransaction(event)} disabled={isRecordingTransaction}>
-                                    {isRecordingTransaction && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Record & Send Receipt
-                                </Button>
+                            </div>
+                            <div className="space-y-3">
+                                <p className="text-xs font-bold uppercase text-muted-foreground">Manual Cash Record</p>
+                                <div className="grid gap-2">
+                                    <Input placeholder="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+                                    <Input placeholder="Village" value={villageName} onChange={(e) => setVillageName(e.target.value)} />
+                                    <div className="flex gap-2">
+                                        <Input placeholder="Amount (₹)" type="number" value={guestAmount} onChange={(e) => setGuestAmount(e.target.value)} />
+                                        <Input placeholder="Mobile (WA)" value={guestMobile} onChange={(e) => setGuestMobile(e.target.value)} maxLength={10} />
+                                    </div>
+                                    <Button className="w-full" size="sm" onClick={() => handleRecordTransaction(event)} disabled={isRecordingTransaction}>
+                                        {isRecordingTransaction && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Record & Send Receipt
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteEvent(event.id!)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                        </DialogContent>
+                    </Dialog>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteEvent(event.id!)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+
+                  {event.withdrawalRequested ? (
+                    <div className="w-full flex items-center justify-center gap-2 py-2 bg-green-50 text-green-700 text-xs font-bold rounded-lg border border-green-100">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Payout Requested
+                    </div>
+                  ) : (
+                    <Button 
+                        className="w-full font-bold uppercase tracking-wider text-[10px]" 
+                        variant="secondary" 
+                        onClick={() => handleWithdraw(event)}
+                        disabled={isWithdrawing === event.id || stats.total <= 0}
+                    >
+                        {isWithdrawing === event.id ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Wallet2 className="h-3 w-3 mr-2" />}
+                        Request Withdrawal (Full Amount)
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );

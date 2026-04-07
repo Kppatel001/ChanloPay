@@ -13,12 +13,17 @@ export type Transaction = {
   type: 'Gift' | 'Donation' | 'Service';
   eventName?: string;
   eventId?: string;
+  hostId?: string;
   paymentMethod?: string;
   receiptQrCode?: string;
   receiptStatus?: 'Sent' | 'Failed' | 'Pending';
   receiptId?: string;
   integrityHash?: string;
   language?: 'en' | 'gu' | 'hi';
+  isManualEntry?: boolean;
+  manualEntryVerified?: boolean;
+  isFlagged?: boolean;
+  flagReason?: string;
 };
 
 export type Event = {
@@ -30,6 +35,7 @@ export type Event = {
   qrCode: string;
   createdAt?: FieldValue;
   withdrawalRequested?: boolean;
+  totalCollected?: number;
 };
 
 export type Host = {
@@ -43,6 +49,7 @@ export type Host = {
   plan?: 'Free' | 'Silver' | 'Gold' | 'Diamond';
   policiesAccepted?: boolean;
   policiesAcceptedAt?: string;
+  totalEvents?: number;
 };
 
 export type WithdrawalRequest = {

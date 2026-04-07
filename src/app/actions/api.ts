@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 // --- SCHEMAS ---
@@ -24,6 +24,16 @@ const TransactionInputSchema = z.object({
   paymentMethod: z.enum(['UPI', 'Cash', 'Gateway', 'Razorpay']),
   type: z.enum(['Gift', 'Donation', 'Service']),
   language: z.enum(['en', 'gu', 'hi']).default('en'),
+  isManualEntry: z.boolean().default(false),
+});
+
+const WithdrawalInputSchema = z.object({
+  hostId: z.string().min(1),
+  eventId: z.string().min(1),
+  hostName: z.string().min(1),
+  eventName: z.string().min(1),
+  totalAmount: z.number().positive(),
+  hostUpi: z.string().min(1),
 });
 
 export type TransactionInput = z.infer<typeof TransactionInputSchema>;
@@ -115,6 +125,8 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
     receiptQrCode: `MANUAL_${Date.now()}`,
     receiptId: receiptId,
     paymentMethod: 'Cash',
+    isManualEntry: true,
+    manualEntryVerified: false,
     receiptStatus: (data.mobile && data.mobile.length === 10) ? 'Sent' : 'None',
   };
 
@@ -122,4 +134,31 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
   await addDoc(txnRef, transactionData);
 
   return { success: true, receiptId };
+}
+
+export async function requestWithdrawal(input: z.infer<typeof WithdrawalInputSchema>) {
+  const validation = WithdrawalInputSchema.safeParse(input);
+  if (!validation.success) throw new Error("Invalid withdrawal data.");
+
+  const { firestore } = initializeFirebase();
+  const data = validation.data;
+  const platformFee = data.totalAmount * 0.02;
+  const payoutAmount = data.totalAmount - platformFee;
+
+  const request = {
+    ...data,
+    platformFee,
+    payoutAmount,
+    status: 'Pending Review',
+    requestDate: new Date().toISOString(),
+  };
+
+  // 1. Create global record
+  await addDoc(collection(firestore, 'withdrawals'), request);
+
+  // 2. Mark event as withdrawn
+  const eventRef = doc(firestore, `hosts/${data.hostId}/events/${data.eventId}`);
+  await updateDoc(eventRef, { withdrawalRequested: true });
+
+  return { success: true };
 }
