@@ -32,6 +32,15 @@
           "type": "string",
           "description": "Date and time when the host registered.",
           "format": "date-time"
+        },
+        "policiesAccepted": {
+          "type": "boolean",
+          "description": "Whether the host has accepted the Privacy Policy and Terms."
+        },
+        "policiesAcceptedAt": {
+          "type": "string",
+          "description": "Timestamp of policy acceptance.",
+          "format": "date-time"
         }
       },
       "required": [

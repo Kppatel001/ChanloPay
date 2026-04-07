@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -14,6 +15,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { PolicyAcceptanceModal } from '@/components/policies/policy-acceptance-modal';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -67,7 +69,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset>
+        <PolicyAcceptanceModal />
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   );
 }

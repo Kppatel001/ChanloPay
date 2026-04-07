@@ -41,6 +41,8 @@ export type Host = {
   registrationDate?: string;
   kycVerified?: boolean;
   plan?: 'Free' | 'Silver' | 'Gold' | 'Diamond';
+  policiesAccepted?: boolean;
+  policiesAcceptedAt?: string;
 };
 
 export type WithdrawalRequest = {

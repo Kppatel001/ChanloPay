@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { doc, setDoc } from 'firebase/firestore';
-import { Loader2, User, Phone, Wallet2, ShieldCheck } from 'lucide-react';
+import { Loader2, User, Phone, Wallet2, ShieldCheck, FileText, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { Header } from '@/components/layout/header';
@@ -206,6 +208,28 @@ export default function SettingsPage() {
             </Card>
           </form>
         </Form>
+
+        <Card className="w-full max-w-2xl shadow-sm border-primary/5">
+          <CardHeader>
+            <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Legal & Policies
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+             <Link href="/policies" className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/50 transition-colors border group">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-lg text-primary">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Privacy Policy & Terms</p>
+                    <p className="text-xs text-muted-foreground">View our terms of service and data safety commitment.</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+             </Link>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
