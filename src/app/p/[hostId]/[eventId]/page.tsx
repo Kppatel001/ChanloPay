@@ -16,9 +16,6 @@ import { Logo } from '@/components/icons';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { initiateSecureGuestPayment, finalizeGuestPayment } from '@/app/actions/api';
 
-// CENTRALIZED PLATFORM COLLECTION UPI
-const PLATFORM_UPI_ID = 'chanlopay@upi'; 
-
 const QUICK_AMOUNTS = [101, 501, 1001, 2101, 5001];
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
@@ -71,7 +68,10 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   };
 
   const handleOpenUpiApp = async () => {
-    if (!guestName || !villageName || !amount || !eventData) return;
+    if (!guestName || !villageName || !amount || !eventData || !hostProfile?.upi) {
+      toast({ variant: 'destructive', title: 'Payment Error', description: 'Host UPI ID is missing.' });
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -88,13 +88,13 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         language: language
       };
 
-      // 1. Secure the order in backend firewall
+      // 1. Log the intent in backend firewall
       const order = await initiateSecureGuestPayment(transactionData);
 
-      // 2. Build the Deep Link URI
-      const upiUri = `upi://pay?pa=${PLATFORM_UPI_ID}&pn=ChanloPay%20Central&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
+      // 2. Build the Deep Link URI DIRECT TO HOST
+      const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Event Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
 
-      // 3. Log the record (Smart Tracking Workaround)
+      // 3. Log the record (Smart Tracking)
       await finalizeGuestPayment(
         order.orderId,
         order.integrityHash,
@@ -122,7 +122,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   };
 
   const handleCopyUpi = () => {
-    navigator.clipboard.writeText(PLATFORM_UPI_ID);
+    if (!hostProfile?.upi) return;
+    navigator.clipboard.writeText(hostProfile.upi);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -170,12 +171,12 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <CardContent className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Firewall Verified Transaction
+                Verified Digital Record Created
               </div>
               <Alert className="bg-primary/5 border-primary/10">
                 <Sparkles className="h-4 w-4 text-primary" />
                 <AlertDescription className="text-xs">
-                  Once your payment is confirmed by the bank, a WhatsApp receipt will be sent automatically.
+                  A WhatsApp receipt will be sent automatically to your mobile number shortly.
                 </AlertDescription>
               </Alert>
               <Button variant="outline" className="w-full font-bold" onClick={() => window.location.reload()}>
@@ -269,7 +270,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <CardHeader className="text-center bg-primary/5 rounded-t-lg">
               <CardTitle className="font-headline text-xl">One-Tap Payment</CardTitle>
               <CardDescription>
-                Paying <span className="font-bold text-foreground">₹{amount}</span> for <strong>{eventData.eventName}</strong>
+                Paying <span className="font-bold text-foreground">₹{amount}</span> directly to <span className="font-bold">{hostProfile.name}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
@@ -287,15 +288,15 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   <ShieldAlert className="h-5 w-5 text-amber-600" />
                   <AlertTitle className="text-amber-900 text-sm font-bold uppercase tracking-tight">App Not Opening?</AlertTitle>
                   <AlertDescription className="text-amber-800 text-[11px] mt-1 leading-tight">
-                    Some browsers block direct links. If it doesn't open, copy the ID below and pay manually.
+                    Some browsers block direct links. If it doesn't open, copy the UPI ID below and pay manually in your app.
                   </AlertDescription>
                 </Alert>
 
                 <div className="flex items-center gap-3 bg-white p-4 rounded-xl border-2 border-amber-100 shadow-sm">
                   <div className="truncate flex-1">
-                    <p className="text-[10px] text-muted-foreground font-bold mb-1 uppercase">Direct Platform UPI ID</p>
+                    <p className="text-[10px] text-muted-foreground font-bold mb-1 uppercase">Direct UPI ID</p>
                     <p className="text-sm font-mono font-bold text-primary truncate">
-                      {PLATFORM_UPI_ID}
+                      {hostProfile.upi}
                     </p>
                   </div>
                   <Button size="sm" className="h-10 gap-2 font-bold" onClick={handleCopyUpi}>
@@ -312,9 +313,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 </Button>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted/30 py-4 flex justify-center gap-2">
+            <CardFooter className="bg-muted/30 py-4 flex justify-center gap-2 text-center">
                 <ShieldCheck className="h-4 w-4 text-primary" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Secured by ChanloPay Central</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Secure Transaction Tracking Enabled</span>
             </CardFooter>
           </Card>
         )}

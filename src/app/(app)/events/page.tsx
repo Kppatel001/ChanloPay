@@ -93,12 +93,13 @@ export default function EventsPage() {
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   
   const handleOpenCreateEventDialog = () => {
-    const isProfileComplete = !!(hostProfile && hostProfile.name && hostProfile.mobile);
+    // Check for complete profile including UPI ID for QR creation
+    const isProfileComplete = !!(hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi);
     if (!isProfileComplete) {
         toast({
             variant: 'destructive',
             title: 'Profile Incomplete',
-            description: 'Please complete your host profile in Settings.',
+            description: 'Please complete your host profile (Name, Mobile, and UPI ID) in Settings to create events.',
         });
         return;
     }
@@ -114,14 +115,14 @@ export default function EventsPage() {
       eventName: newEventName.trim(),
       eventDate: new Date().toISOString(),
       location: newEventLocation.trim(),
-      qrCode: 'PLATFORM_COLLECT',
+      qrCode: hostProfile.upi || 'PENDING',
       createdAt: serverTimestamp(),
       withdrawalRequested: false,
     };
     
     const collectionRef = collection(firestore, `hosts/${user.uid}/events`);
     addDoc(collectionRef, newEvent).then(() => {
-      toast({ title: "Event Created!", description: `${newEvent.eventName} is now live.` });
+      toast({ title: "Event Created!", description: `${newEvent.eventName} is now live with your UPI QR.` });
       setNewEventName('');
       setNewEventLocation('');
       setCreateDialogOpen(false);
@@ -191,7 +192,7 @@ export default function EventsPage() {
               <DialogHeader>
                 <DialogTitle>Start New Event</DialogTitle>
                 <DialogDescription>
-                  Money will be collected into your ChanloPay Platform balance.
+                  Money will be sent directly to your UPI ID: <strong>{hostProfile?.upi}</strong>
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -234,7 +235,7 @@ export default function EventsPage() {
                 <CardContent className="space-y-4">
                   <div className="bg-muted/50 p-4 rounded-lg border flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Platform Balance</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Direct Collection</p>
                       <p className="text-xl font-black text-primary">{formatCurrency(stats.total)}</p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-primary opacity-20" />
