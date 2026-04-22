@@ -115,21 +115,21 @@ export default function DashboardPage() {
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2">
                         <TrendingUp className="h-4 w-4" />
-                        Total Shagun Collected
+                        Total Collected
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-3xl font-black">{formatCurrency(totalCollected)}</div>
                     <p className="text-[10px] mt-2 opacity-70 flex items-center gap-1">
                         <ShieldCheck className="h-3 w-3" />
-                        Secure Digital Ledger Active
+                        Trust-Verified Secure Ledger
                     </p>
                 </CardContent>
             </Card>
 
             <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold text-maroon flex items-center gap-2 uppercase tracking-tight">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-trust-green">
                         <Calendar className="h-4 w-4 text-accent" />
                         Active Events
                     </CardTitle>
@@ -141,7 +141,7 @@ export default function DashboardPage() {
 
             <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold text-maroon uppercase tracking-tight">Recent Payments</CardTitle>
+                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-trust-green">Recent Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{transactions.length}</div>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
 
             <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold text-maroon uppercase tracking-tight">System Status</CardTitle>
+                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-trust-green">System Status</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-secondary">Secured</div>
@@ -161,8 +161,8 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card className="lg:col-span-4 border-accent/10">
             <CardHeader>
-              <CardTitle className="text-maroon">Collection Trends</CardTitle>
-              <CardDescription>Monthly growth of your digital registry.</CardDescription>
+              <CardTitle className="text-trust-green">Collection Trends</CardTitle>
+              <CardDescription>Visual summary of registry growth.</CardDescription>
             </CardHeader>
             <CardContent>
               <OverviewChart data={chartData} isLoading={isLoading} />
