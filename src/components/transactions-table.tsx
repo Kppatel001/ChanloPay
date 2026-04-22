@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -55,7 +56,6 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Logo } from '@/components/icons';
 
-// Augment jsPDF with autoTable
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
@@ -185,12 +185,11 @@ export function TransactionsTable() {
   const handleExportPDF = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     doc.autoTable({
-      head: [['Event', 'Guest Name', 'Village', 'Mobile', 'Amount', 'Date']],
+      head: [['Event', 'Guest Name', 'Village', 'Amount', 'Date']],
       body: transactions.map((t) => [
         t.eventName,
         t.name,
         t.village || 'N/A',
-        t.mobile || 'N/A',
         formatCurrency(t.amount),
         t.date.toLocaleDateString(),
       ]),
@@ -204,7 +203,6 @@ export function TransactionsTable() {
         Event: t.eventName,
         'Guest Name': t.name,
         Village: t.village || 'N/A',
-        Mobile: t.mobile || 'N/A',
         Amount: t.amount,
         Date: t.date,
       }))
@@ -232,16 +230,16 @@ export function TransactionsTable() {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle>Guest Payment History</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => fetchAllTransactions()}>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => fetchAllTransactions()}>
                <RefreshCw className="mr-2 h-4 w-4" />
                Refresh
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
                   <FileDown className="mr-2 h-4 w-4" />
                   Export
                 </Button>
@@ -258,8 +256,8 @@ export function TransactionsTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Event</TableHead>
@@ -274,24 +272,24 @@ export function TransactionsTable() {
                 {paginatedTransactions.length > 0 ? (
                   paginatedTransactions.map((transaction) => (
                     <TableRow key={transaction.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium max-w-[150px] truncate">
                         {transaction.eventName}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{transaction.name}</span>
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="font-medium truncate max-w-[120px]">{transaction.name}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-xs">
-                            <Home className="h-3 w-3 text-muted-foreground" />
-                            <span>{transaction.village || 'N/A'}</span>
+                          <div className="flex items-center gap-2 text-[10px] md:text-xs">
+                            <Home className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span className="truncate max-w-[100px]">{transaction.village || 'N/A'}</span>
                           </div>
                           {transaction.mobile && transaction.mobile !== 'N/A' && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3" />
+                            <div className="flex items-center gap-2 text-[10px] md:text-xs text-muted-foreground">
+                              <Phone className="h-3 w-3 shrink-0" />
                               <span>{transaction.mobile}</span>
                             </div>
                           )}
@@ -299,11 +297,11 @@ export function TransactionsTable() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <Badge variant="default" className="w-fit text-[10px] h-4">
+                          <Badge variant="default" className="w-fit text-[9px] h-4">
                             {transaction.status}
                           </Badge>
                           {transaction.receiptStatus === 'Sent' && (
-                             <div className="flex items-center gap-1 text-[10px] text-green-600 font-bold">
+                             <div className="flex items-center gap-1 text-[9px] text-green-600 font-bold">
                                <MessageCircle className="h-3 w-3" />
                                WA Sent
                              </div>
@@ -333,7 +331,7 @@ export function TransactionsTable() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete Record?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete the payment record for {transaction.name}? This cannot be undone.
+                                  Are you sure you want to delete the payment record for {transaction.name}?
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -364,16 +362,17 @@ export function TransactionsTable() {
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-between pt-4">
-            <div className="text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+            <div className="text-xs text-muted-foreground">
               Showing {transactions.length > 0 ? start + 1 : 0} to{' '}
               {Math.min(end, transactions.length)} of {transactions.length} recorded payments.
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <Button
                 asChild
                 variant="outline"
                 size="sm"
+                className="flex-1 sm:flex-none"
                 disabled={page <= 1}
               >
                 <Link href={`/transactions?page=${page - 1}`}>Previous</Link>
@@ -382,6 +381,7 @@ export function TransactionsTable() {
                 asChild
                 variant="outline"
                 size="sm"
+                className="flex-1 sm:flex-none"
                 disabled={page >= totalPages}
               >
                 <Link href={`/transactions?page=${page + 1}`}>Next</Link>
@@ -391,29 +391,25 @@ export function TransactionsTable() {
         </CardContent>
       </Card>
 
-      {/* Digital Receipt Dialog */}
       <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
         <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white border-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Digital Receipt</DialogTitle>
-            <DialogDescription>
-              View detailed receipt for the selected transaction.
-            </DialogDescription>
           </DialogHeader>
           <div className="bg-primary p-6 text-primary-foreground flex flex-col items-center gap-2">
             <Logo className="h-10 w-10 text-white" />
             <div className="text-center">
               <h2 className="text-2xl font-bold tracking-tight">Receipt</h2>
-              <p className="text-xs opacity-80 uppercase tracking-widest">Transaction Successfully Verified</p>
+              <p className="text-[10px] opacity-80 uppercase tracking-widest">Transaction Verified</p>
             </div>
           </div>
           
-          <div className="p-8 space-y-6">
+          <div className="p-6 md:p-8 space-y-6">
             <div className="flex justify-between items-center pb-4 border-b">
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Payer Details</p>
-                <p className="text-sm font-bold">{selectedTransaction?.name}</p>
-                <p className="text-xs text-muted-foreground">{selectedTransaction?.village}</p>
+                <p className="text-sm font-bold truncate max-w-[120px]">{selectedTransaction?.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{selectedTransaction?.village}</p>
               </div>
               <div className="text-right space-y-1">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Amount Paid</p>
@@ -421,51 +417,46 @@ export function TransactionsTable() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Event</p>
-                <p className="text-xs font-semibold">{selectedTransaction?.eventName}</p>
+                <p className="text-[11px] font-semibold truncate">{selectedTransaction?.eventName}</p>
               </div>
               <div className="space-y-1 text-right">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Date</p>
-                <p className="text-xs font-semibold">{selectedTransaction?.date.toLocaleDateString()}</p>
+                <p className="text-[11px] font-semibold">{selectedTransaction?.date.toLocaleDateString()}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Receipt ID</p>
-                <p className="text-[11px] font-mono font-bold text-primary">{selectedTransaction?.receiptId}</p>
+                <p className="text-[10px] font-mono font-bold text-primary">{selectedTransaction?.receiptId}</p>
               </div>
               <div className="space-y-1 text-right">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Method</p>
-                <p className="text-xs font-semibold">{selectedTransaction?.paymentMethod || 'UPI'}</p>
+                <p className="text-[11px] font-semibold">{selectedTransaction?.paymentMethod || 'UPI'}</p>
               </div>
             </div>
 
-            <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
+            <div className="bg-primary/5 p-3 rounded-xl border border-primary/10 flex items-center gap-3">
+              <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
               <div className="flex-1">
-                <p className="text-xs font-bold text-primary">WhatsApp Acknowledgment</p>
-                <p className="text-[10px] text-muted-foreground">Digital receipt {selectedTransaction?.receiptStatus === 'Sent' ? 'delivered to' : 'attempted for'} +91 {selectedTransaction?.mobile}</p>
+                <p className="text-[11px] font-bold text-primary">WhatsApp Acknowledgment</p>
+                <p className="text-[9px] text-muted-foreground">Receipt {selectedTransaction?.receiptStatus === 'Sent' ? 'delivered to' : 'pending for'} +91 {selectedTransaction?.mobile}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 justify-center py-2">
-              <ShieldCheck className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Firewall Secured by ChanloPay</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-4">
-               <Button variant="outline" className="w-full h-10 text-xs font-bold" onClick={() => setIsReceiptOpen(false)}>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+               <Button variant="outline" className="w-full h-9 text-xs font-bold" onClick={() => setIsReceiptOpen(false)}>
                  Close
                </Button>
-               <Button className="w-full h-10 text-xs font-bold gap-2">
+               <Button className="w-full h-9 text-xs font-bold gap-2">
                  <Download className="h-3 w-3" />
-                 Download PDF
+                 PDF
                </Button>
             </div>
           </div>
           
           <div className="bg-muted/30 p-4 text-center">
-            <p className="text-[9px] text-muted-foreground">This is a system-generated electronic receipt. No physical signature is required.</p>
+            <p className="text-[8px] text-muted-foreground">Digital record secured by ChanloPay.</p>
           </div>
         </DialogContent>
       </Dialog>

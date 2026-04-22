@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -90,7 +91,6 @@ export default function DashboardPage() {
   const totalCollected = transactions.reduce((sum, t) => sum + t.amount, 0);
   const eventsCount = events?.length ?? 0;
 
-  // Chart Data
   const monthlyRevenue = transactions.reduce((acc, transaction) => {
     const month = transaction.date.toLocaleString('default', { month: 'short' });
     if (!acc[month]) acc[month] = { month: month, revenue: 0 };
@@ -107,20 +107,20 @@ export default function DashboardPage() {
       <Header pageTitle="Host Dashboard" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-2 opacity-10">
-                    <IndianRupee className="h-24 w-24" />
+                    <IndianRupee className="h-16 w-16 md:h-24 md:w-24" />
                 </div>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider opacity-80 flex items-center gap-2">
+                        <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
                         Total Collected
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-3xl font-black text-white">{formatCurrency(totalCollected)}</div>
-                    <p className="text-[10px] mt-2 opacity-70 flex items-center gap-1">
+                    <div className="text-2xl md:text-3xl font-black text-white">{formatCurrency(totalCollected)}</div>
+                    <p className="text-[9px] md:text-[10px] mt-1 md:mt-2 opacity-70 flex items-center gap-1">
                         <ShieldCheck className="h-3 w-3" />
                         Verified Digital Ledger
                     </p>
@@ -129,40 +129,40 @@ export default function DashboardPage() {
 
             <Card className="border-primary/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-primary">
+                    <CardTitle className="text-xs font-bold flex items-center gap-2 uppercase tracking-tight text-primary">
                         <Calendar className="h-4 w-4 text-secondary" />
                         Active Events
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{eventsCount}</div>
+                    <div className="text-xl md:text-2xl font-bold">{eventsCount}</div>
                 </CardContent>
             </Card>
 
             <Card className="border-primary/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-primary">Recent Payments</CardTitle>
+                    <CardTitle className="text-xs font-bold uppercase tracking-tight text-primary">Recent Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{transactions.length}</div>
+                    <div className="text-xl md:text-2xl font-bold">{transactions.length}</div>
                 </CardContent>
             </Card>
 
             <Card className="border-primary/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-primary">System Status</CardTitle>
+                    <CardTitle className="text-xs font-bold uppercase tracking-tight text-primary">System Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-success-green">Live</div>
+                    <div className="text-xl md:text-2xl font-bold text-success-green">Live</div>
                 </CardContent>
             </Card>
         </div>
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
           <Card className="lg:col-span-4 border-primary/10">
-            <CardHeader>
-              <CardTitle className="text-primary">Collection Trends</CardTitle>
-              <CardDescription>Visual summary of registry growth.</CardDescription>
+            <CardHeader className="pb-2 md:pb-6">
+              <CardTitle className="text-lg md:text-xl text-primary">Collection Trends</CardTitle>
+              <CardDescription className="text-xs">Registry growth visualization.</CardDescription>
             </CardHeader>
             <CardContent>
               <OverviewChart data={chartData} isLoading={isLoading} />

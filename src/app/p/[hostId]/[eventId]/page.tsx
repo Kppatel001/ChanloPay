@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, CreditCard, Copy, Check, ExternalLink, Sparkles, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, Sparkles, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -149,97 +149,96 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const isCompleted = eventData.status === 'Completed';
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 flex flex-col items-center">
+    <div className="min-h-screen bg-background p-2 md:p-8 flex flex-col items-center">
       <div className="w-full max-w-md flex flex-col items-center">
-        <div className="mb-8 flex items-center gap-2 text-primary">
+        <div className="mb-4 md:mb-8 flex items-center gap-2 text-primary">
           <Logo className="h-8 w-8" />
           <h1 className="font-headline text-2xl font-bold">ChanloPay</h1>
         </div>
 
         {isCompleted && !isFinalized ? (
           <Card className="w-full shadow-lg border-destructive/20 bg-destructive/5">
-            <CardHeader className="text-center">
+            <CardHeader className="text-center p-4 md:p-6">
               <div className="mx-auto bg-destructive/10 text-destructive p-3 rounded-full w-fit mb-2">
-                <AlertCircle className="h-8 w-8" />
+                <AlertCircle className="h-6 w-6 md:h-8 md:w-8" />
               </div>
-              <CardTitle className="font-headline text-2xl text-destructive">Registry Closed</CardTitle>
-              <CardDescription className="font-body">
-                This event (<strong>{eventData.eventName}</strong>) has been completed and is no longer accepting digital shagun.
+              <CardTitle className="font-headline text-xl md:text-2xl text-destructive">Registry Closed</CardTitle>
+              <CardDescription className="font-body text-xs md:text-sm">
+                This event (<strong>{eventData.eventName}</strong>) is no longer accepting digital shagun.
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">Please contact the host <strong>{hostProfile.name}</strong> if you believe this is an error.</p>
+            <CardFooter className="p-4">
               <Button variant="outline" className="w-full" onClick={() => window.history.back()}>Go Back</Button>
-            </CardContent>
+            </CardFooter>
           </Card>
         ) : isFinalized ? (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
-            <CardHeader className="text-center">
+            <CardHeader className="text-center p-4 md:p-6">
               <div className="mx-auto bg-green-100 text-green-600 p-2 rounded-full w-fit mb-2">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-              <CardTitle className="font-headline text-xl">Request Logged!</CardTitle>
-              <CardDescription className="font-body">
+              <CardTitle className="font-headline text-lg md:text-xl">Request Logged!</CardTitle>
+              <CardDescription className="font-body text-xs md:text-sm">
                 ₹{amount} for <strong>{eventData.eventName}</strong> has been securely logged.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
+            <CardContent className="flex flex-col items-center gap-4 p-4">
+              <div className="flex items-center gap-2 text-[10px] md:text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Verified Digital Record Created
               </div>
               <Alert className="bg-primary/5 border-primary/10">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-xs">
+                <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                <AlertDescription className="text-[10px] md:text-xs leading-tight">
                   A WhatsApp receipt will be sent automatically to your mobile number shortly.
                 </AlertDescription>
               </Alert>
-              <Button variant="outline" className="w-full font-bold" onClick={() => window.location.reload()}>
+              <Button variant="outline" className="w-full font-bold h-10 md:h-12" onClick={() => window.location.reload()}>
                 Make Another Payment
               </Button>
             </CardContent>
           </Card>
         ) : !hasSubmitted ? (
           <Card className="w-full shadow-lg border-primary/20">
-            <CardHeader className="text-center">
-              <CardTitle className="font-headline text-2xl">{eventData.eventName}</CardTitle>
-              <CardDescription className="font-body">
-                Hosted by <span className="font-semibold text-foreground">{hostProfile.name}</span>
+            <CardHeader className="text-center p-4 md:p-6">
+              <CardTitle className="font-headline text-lg md:text-2xl truncate">{eventData.eventName}</CardTitle>
+              <CardDescription className="font-body text-xs md:text-sm">
+                Hosted by <span className="font-semibold text-foreground truncate">{hostProfile.name}</span>
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleNext}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 p-4 md:p-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="guestName" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Full Name</Label>
+                  <Label htmlFor="guestName" className="font-body text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Full Name</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-primary" />
-                    <Input id="guestName" placeholder="Enter full name" className="pl-10 h-12" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input id="guestName" placeholder="Enter full name" className="pl-10 h-10 md:h-12 text-sm" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="villageName" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Village Name</Label>
+                  <Label htmlFor="villageName" className="font-body text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Village Name</Label>
                   <div className="relative">
-                    <Home className="absolute left-3 top-3 h-4 w-4 text-primary" />
-                    <Input id="villageName" placeholder="Enter village name" className="pl-10 h-12" value={villageName} onChange={(e) => setVillageName(e.target.value)} required />
+                    <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input id="villageName" placeholder="Enter village name" className="pl-10 h-10 md:h-12 text-sm" value={villageName} onChange={(e) => setVillageName(e.target.value)} required />
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="mobile" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">WhatsApp Number (For Receipt)</Label>
+                  <Label htmlFor="mobile" className="font-body text-[10px] uppercase tracking-wider font-bold text-muted-foreground">WhatsApp Number</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-primary" />
-                    <Input id="mobile" placeholder="10-digit number" className="pl-10 h-12" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={10} />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input id="mobile" placeholder="10-digit number" className="pl-10 h-10 md:h-12 text-sm" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={10} />
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                    <Label className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Quick Amount (Shagun)</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <Label className="font-body text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Quick Amount (Shagun)</Label>
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 md:gap-2">
                         {QUICK_AMOUNTS.map((q) => (
                             <Button 
                                 key={q} 
                                 type="button" 
                                 variant={amount === q.toString() ? 'default' : 'outline'} 
-                                className="h-10 text-xs font-bold"
+                                className="h-8 md:h-10 text-[10px] md:text-xs font-bold px-1"
                                 onClick={() => setAmount(q.toString())}
                             >
                                 ₹{q}
@@ -248,89 +247,88 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="amount" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Other Amount (₹)</Label>
+                    <Label htmlFor="amount" className="font-body text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Other Amount (₹)</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-3 text-primary font-bold">₹</span>
-                      <Input id="amount" type="number" placeholder="Custom" className="pl-8 h-12 font-bold" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-bold text-sm">₹</span>
+                      <Input id="amount" type="number" placeholder="Custom" className="pl-7 h-10 md:h-12 font-bold text-sm" value={amount} onChange={(e) => setAmount(e.target.value)} required />
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="language" className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground">Receipt Language</Label>
+                    <Label htmlFor="language" className="font-body text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Receipt Lang</Label>
                     <Select value={language} onValueChange={(v: any) => setLanguage(v)}>
-                        <SelectTrigger className="h-12">
-                            <Languages className="mr-2 h-4 w-4 text-primary" />
+                        <SelectTrigger className="h-10 md:h-12 text-sm">
+                            <Languages className="mr-1 h-3 w-3 md:h-4 md:w-4 text-primary shrink-0" />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="en">English</SelectItem>
                             <SelectItem value="gu">ગુજરાતી</SelectItem>
-                            <SelectItem value="hi">હિન્દી</SelectItem>
+                            <SelectItem value="hi">हिन्दी</SelectItem>
                         </SelectContent>
                     </Select>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>
-                  <Button type="submit" className="w-full h-14 text-xl font-bold group">
+              <CardFooter className="p-4 md:p-6">
+                  <Button type="submit" className="w-full h-12 md:h-14 text-lg md:text-xl font-bold group">
                     Proceed to Pay
-                    <ChevronRight className="ml-1 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight className="ml-1 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-1 transition-transform" />
                   </Button>
               </CardFooter>
             </form>
           </Card>
         ) : (
           <Card className="w-full shadow-lg border-primary/20 animate-in fade-in zoom-in duration-300">
-            <CardHeader className="text-center bg-primary/5 rounded-t-lg">
-              <CardTitle className="font-headline text-xl">One-Tap Payment</CardTitle>
-              <CardDescription>
-                Paying <span className="font-bold text-foreground">₹{amount}</span> directly to <span className="font-bold">{hostProfile.name}</span>
+            <CardHeader className="text-center bg-primary/5 rounded-t-lg p-4 md:p-6">
+              <CardTitle className="font-headline text-lg md:text-xl">One-Tap Payment</CardTitle>
+              <CardDescription className="text-xs md:text-sm">
+                Paying <span className="font-bold text-foreground">₹{amount}</span> to <span className="font-bold truncate">{hostProfile.name}</span>
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-4 md:p-6 space-y-4 md:space-y-6">
               
               <div className="space-y-4">
-                <Button className="w-full h-20 text-xl font-black shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 flex flex-col gap-0" onClick={handleOpenUpiApp} disabled={isSubmitting}>
+                <Button className="w-full h-16 md:h-20 text-lg md:text-xl font-black shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 flex flex-col gap-0" onClick={handleOpenUpiApp} disabled={isSubmitting}>
                   <div className="flex items-center gap-2">
-                    {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <ExternalLink className="h-6 w-6" />}
+                    {isSubmitting ? <Loader2 className="h-5 w-5 md:h-6 md:w-6 animate-spin" /> : <ExternalLink className="h-5 w-5 md:h-6 md:w-6" />}
                     OPEN UPI APPS
                   </div>
-                  <span className="text-[10px] font-medium opacity-80">(GPay, PhonePe, Paytm)</span>
+                  <span className="text-[9px] md:text-[10px] font-medium opacity-80">(GPay, PhonePe, Paytm)</span>
                 </Button>
 
-                <Alert variant="default" className="bg-amber-50 border-amber-200">
-                  <ShieldAlert className="h-5 w-5 text-amber-600" />
-                  <AlertTitle className="text-amber-900 text-sm font-bold uppercase tracking-tight">App Not Opening?</AlertTitle>
-                  <AlertDescription className="text-amber-800 text-[11px] mt-1 leading-tight">
-                    Some browsers block direct links. If it doesn't open, copy the UPI ID below and pay manually in your app.
+                <Alert className="bg-amber-50 border-amber-200 py-3">
+                  <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+                  <AlertDescription className="text-[10px] md:text-[11px] text-amber-800 leading-tight">
+                    Browser blocks direct app launch? Copy UPI ID below and pay in your app.
                   </AlertDescription>
                 </Alert>
 
-                <div className="flex items-center gap-3 bg-white p-4 rounded-xl border-2 border-amber-100 shadow-sm">
+                <div className="flex items-center gap-2 bg-white p-3 rounded-xl border-2 border-amber-100 shadow-sm">
                   <div className="truncate flex-1">
-                    <p className="text-[10px] text-muted-foreground font-bold mb-1 uppercase">Direct UPI ID</p>
-                    <p className="text-sm font-mono font-bold text-primary truncate">
+                    <p className="text-[9px] text-muted-foreground font-bold mb-0.5 uppercase">Direct UPI ID</p>
+                    <p className="text-xs font-mono font-bold text-primary truncate">
                       {hostProfile.upi}
                     </p>
                   </div>
-                  <Button size="sm" className="h-10 gap-2 font-bold" onClick={handleCopyUpi}>
-                    {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <Button size="sm" className="h-8 gap-1 text-[10px] font-bold shrink-0" onClick={handleCopyUpi}>
+                    {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                     {isCopied ? "Copied" : "Copy"}
                   </Button>
                 </div>
               </div>
 
-              <div className="pt-4 text-center">
-                <Button variant="ghost" className="text-xs text-muted-foreground" onClick={() => setHasSubmitted(false)}>
-                  <ArrowLeft className="mr-2 h-3 w-3" />
+              <div className="text-center">
+                <Button variant="ghost" size="sm" className="text-[10px] text-muted-foreground" onClick={() => setHasSubmitted(false)}>
+                  <ArrowLeft className="mr-1.5 h-3 w-3" />
                   Back to Details
                 </Button>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted/30 py-4 flex justify-center gap-2 text-center">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Secure Transaction Tracking Enabled</span>
+            <CardFooter className="bg-muted/30 py-3 flex justify-center gap-1.5 text-center">
+                <ShieldCheck className="h-3 w-3 text-primary" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Secure Tracking Enabled</span>
             </CardFooter>
           </Card>
         )}
