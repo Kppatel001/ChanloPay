@@ -103,7 +103,7 @@ export default function DashboardPage() {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <div className="flex min-h-screen w-full flex-col bg-background">
       <Header pageTitle="Host Dashboard" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         
@@ -119,17 +119,17 @@ export default function DashboardPage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-3xl font-black">{formatCurrency(totalCollected)}</div>
+                    <div className="text-3xl font-black text-white">{formatCurrency(totalCollected)}</div>
                     <p className="text-[10px] mt-2 opacity-70 flex items-center gap-1">
                         <ShieldCheck className="h-3 w-3" />
-                        Trust-Verified Secure Ledger
+                        Verified Digital Ledger
                     </p>
                 </CardContent>
             </Card>
 
             <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-trust-green">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-royal-maroon">
                         <Calendar className="h-4 w-4 text-accent" />
                         Active Events
                     </CardTitle>
@@ -141,7 +141,7 @@ export default function DashboardPage() {
 
             <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-trust-green">Recent Payments</CardTitle>
+                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-royal-maroon">Recent Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{transactions.length}</div>
@@ -150,10 +150,10 @@ export default function DashboardPage() {
 
             <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-trust-green">System Status</CardTitle>
+                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-royal-maroon">System Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-secondary">Secured</div>
+                    <div className="text-2xl font-bold text-success-green">Live</div>
                 </CardContent>
             </Card>
         </div>
@@ -161,7 +161,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card className="lg:col-span-4 border-accent/10">
             <CardHeader>
-              <CardTitle className="text-trust-green">Collection Trends</CardTitle>
+              <CardTitle className="text-royal-maroon">Collection Trends</CardTitle>
               <CardDescription>Visual summary of registry growth.</CardDescription>
             </CardHeader>
             <CardContent>
