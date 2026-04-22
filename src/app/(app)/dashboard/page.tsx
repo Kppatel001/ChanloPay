@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -109,12 +108,12 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
+            <Card className="bg-secondary text-secondary-foreground border-none shadow-xl shadow-secondary/20 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-2 opacity-10">
                     <CheckCircle2 className="h-24 w-24" />
                 </div>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2 text-primary-foreground">
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2">
                         <TrendingUp className="h-4 w-4" />
                         Total Shagun Collected
                     </CardTitle>
@@ -128,10 +127,10 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-primary/10 shadow-md">
+            <Card className="border-secondary/10 shadow-md">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
+                        <Calendar className="h-4 w-4 text-accent" />
                         Active Events
                     </CardTitle>
                 </CardHeader>
@@ -140,7 +139,7 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-primary/10 shadow-md">
+            <Card className="border-secondary/10 shadow-md">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Recent Payments</CardTitle>
                 </CardHeader>
@@ -149,18 +148,18 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-primary/10 shadow-md">
+            <Card className="border-secondary/10 shadow-md">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Platform Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-primary">Live</div>
+                    <div className="text-2xl font-bold text-secondary">Live</div>
                 </CardContent>
             </Card>
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4 border-primary/10">
+          <Card className="lg:col-span-4 border-secondary/10">
             <CardHeader>
               <CardTitle>Collection Trends</CardTitle>
               <CardDescription>Monthly growth of your digital registry.</CardDescription>
