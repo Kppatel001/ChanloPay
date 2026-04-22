@@ -108,7 +108,7 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="bg-secondary text-secondary-foreground border-none shadow-xl shadow-secondary/20 overflow-hidden relative">
+            <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-2 opacity-10">
                     <IndianRupee className="h-24 w-24" />
                 </div>
@@ -127,10 +127,10 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-accent/20 shadow-md">
+            <Card className="border-primary/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-royal-maroon">
-                        <Calendar className="h-4 w-4 text-accent" />
+                    <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-primary">
+                        <Calendar className="h-4 w-4 text-secondary" />
                         Active Events
                     </CardTitle>
                 </CardHeader>
@@ -139,18 +139,18 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-accent/20 shadow-md">
+            <Card className="border-primary/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-royal-maroon">Recent Payments</CardTitle>
+                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-primary">Recent Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{transactions.length}</div>
                 </CardContent>
             </Card>
 
-            <Card className="border-accent/20 shadow-md">
+            <Card className="border-primary/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-royal-maroon">System Status</CardTitle>
+                    <CardTitle className="text-sm font-bold uppercase tracking-tight text-primary">System Status</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-success-green">Live</div>
@@ -159,9 +159,9 @@ export default function DashboardPage() {
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4 border-accent/10">
+          <Card className="lg:col-span-4 border-primary/10">
             <CardHeader>
-              <CardTitle className="text-royal-maroon">Collection Trends</CardTitle>
+              <CardTitle className="text-primary">Collection Trends</CardTitle>
               <CardDescription>Visual summary of registry growth.</CardDescription>
             </CardHeader>
             <CardContent>

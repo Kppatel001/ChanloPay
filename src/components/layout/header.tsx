@@ -47,7 +47,7 @@ export function Header({ pageTitle }: HeaderProps) {
   };
   
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-royal-maroon text-primary-foreground px-4 backdrop-blur-sm md:px-6 shadow-md">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-primary text-primary-foreground px-4 backdrop-blur-sm md:px-6 shadow-md">
       <div className="md:hidden">
         <SidebarTrigger className="text-white" />
       </div>
@@ -59,9 +59,9 @@ export function Header({ pageTitle }: HeaderProps) {
       <div className="ml-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-white/10 ring-accent">
-              <Avatar className="h-9 w-9 border-2 border-accent">
-                <AvatarFallback className="bg-accent text-accent-foreground font-bold">{user?.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-white/10 ring-offset-2 ring-primary-foreground">
+              <Avatar className="h-9 w-9 border-2 border-secondary">
+                <AvatarFallback className="bg-secondary text-secondary-foreground font-bold">{user?.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>

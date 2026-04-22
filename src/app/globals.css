@@ -4,72 +4,72 @@
 
 @layer base {
   :root {
-    /* Background: Soft Ivory (#FFF8E7) */
-    --background: 44 100% 96%;
-    --foreground: 351 61% 10%;
+    /* Background: Soft Mint White */
+    --background: 142 25% 98%;
+    --foreground: 142 50% 10%;
     
     /* Card/Popover */
-    --card: 44 100% 98%;
-    --card-foreground: 351 61% 10%;
-    --popover: 44 100% 98%;
-    --popover-foreground: 351 61% 10%;
+    --card: 142 25% 99%;
+    --card-foreground: 142 50% 10%;
+    --popover: 142 25% 99%;
+    --popover-foreground: 142 50% 10%;
     
-    /* Action Buttons: Navy Blue (#1A237E) */
-    --primary: 235 66% 30%;
-    --primary-foreground: 44 100% 98%;
+    /* Primary: Sage Green (#3B7A57 equivalent) */
+    --primary: 142 45% 35%;
+    --primary-foreground: 142 10% 98%;
     
-    /* Brand/Wedding: Royal Maroon (#7B1E2B) */
-    --secondary: 351 61% 30%;
-    --secondary-foreground: 44 100% 98%;
+    /* Secondary: Silver (#C0C0C0) */
+    --secondary: 0 0% 75%;
+    --secondary-foreground: 0 0% 20%;
     
-    /* Highlights: Gold (#D4AF37) */
-    --accent: 46 65% 52%;
-    --accent-foreground: 235 66% 10%;
+    /* Highlights: Light Sage / Silver Metallic */
+    --accent: 142 15% 90%;
+    --accent-foreground: 142 45% 20%;
     
-    /* Success/Money: Deep Green (#2E7D32) */
-    --success: 123 46% 33%;
-    --success-foreground: 44 100% 98%;
+    /* Success/Money: Fresh Green */
+    --success: 142 60% 30%;
+    --success-foreground: 142 10% 98%;
     
-    /* Error: Red (#C62828) */
-    --destructive: 0 66% 47%;
+    /* Error: Soft Red */
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
     
-    --muted: 44 20% 90%;
-    --muted-foreground: 351 20% 40%;
-    --border: 44 30% 85%;
-    --input: 44 30% 88%;
-    --ring: 235 66% 30%;
+    --muted: 142 10% 92%;
+    --muted-foreground: 142 20% 40%;
+    --border: 142 15% 85%;
+    --input: 142 15% 88%;
+    --ring: 142 45% 35%;
     --radius: 0.75rem;
 
-    /* Sidebar uses Royal Maroon for the premium brand feel */
-    --sidebar-background: 351 61% 20%;
-    --sidebar-foreground: 44 100% 90%;
-    --sidebar-primary: 46 65% 52%;
-    --sidebar-primary-foreground: 351 61% 10%;
-    --sidebar-accent: 351 61% 25%;
-    --sidebar-accent-foreground: 44 100% 98%;
-    --sidebar-border: 351 61% 15%;
-    --sidebar-ring: 46 65% 52%;
+    /* Sidebar: Sage Gradient */
+    --sidebar-background: 142 35% 20%;
+    --sidebar-foreground: 142 20% 95%;
+    --sidebar-primary: 0 0% 75%;
+    --sidebar-primary-foreground: 142 45% 10%;
+    --sidebar-accent: 142 35% 25%;
+    --sidebar-accent-foreground: 142 20% 98%;
+    --sidebar-border: 142 35% 15%;
+    --sidebar-ring: 0 0% 75%;
   }
 
   .dark {
-    --background: 351 61% 5%;
-    --foreground: 44 100% 94%;
-    --card: 351 61% 8%;
-    --card-foreground: 44 100% 94%;
-    --popover: 351 61% 5%;
-    --popover-foreground: 44 100% 94%;
-    --primary: 235 66% 50%;
-    --primary-foreground: 44 100% 98%;
-    --secondary: 351 61% 30%;
-    --secondary-foreground: 44 100% 94%;
-    --accent: 46 65% 52%;
-    --accent-foreground: 235 66% 10%;
-    --destructive: 0 66% 40%;
+    --background: 142 45% 5%;
+    --foreground: 142 10% 95%;
+    --card: 142 45% 8%;
+    --card-foreground: 142 10% 95%;
+    --popover: 142 45% 5%;
+    --popover-foreground: 142 10% 95%;
+    --primary: 142 45% 45%;
+    --primary-foreground: 142 10% 98%;
+    --secondary: 0 0% 60%;
+    --secondary-foreground: 142 10% 95%;
+    --accent: 0 0% 75%;
+    --accent-foreground: 142 45% 10%;
+    --destructive: 0 60% 45%;
     --destructive-foreground: 0 0% 98%;
-    --border: 351 61% 15%;
-    --input: 351 61% 15%;
-    --ring: 235 66% 50%;
+    --border: 142 45% 15%;
+    --input: 142 45% 15%;
+    --ring: 142 45% 45%;
   }
 }
 
@@ -83,14 +83,11 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
   }
-  .bg-royal-maroon {
-    background-color: #7B1E2B;
+  .bg-silver {
+    background-color: #C0C0C0;
   }
-  .text-royal-maroon {
-    color: #7B1E2B;
-  }
-  .text-gold {
-    color: #D4AF37;
+  .text-silver {
+    color: #C0C0C0;
   }
   .text-success-green {
     color: #2E7D32;
