@@ -44,6 +44,11 @@ async function sendWhatsAppReceipt(data: any, eventName: string, receiptId: stri
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
+  if (!token || !phoneId) {
+    console.error("[WHATSAPP] Missing credentials in .env");
+    return false;
+  }
+
   const templates = {
     en: `Namaste ${data.name}! 🙏\n\nThank you for your generous gift of ₹${data.amount} for ${eventName}. We have securely received your contribution.\n\nReceipt ID: ${receiptId}\n\nWith love,\nChanloPay Team`,
     gu: `નમસ્તે ${data.name}! 🙏\n\n${eventName} માટે તમારી ₹${data.amount} ની ભેટ બદલ ખૂબ ખૂબ આભાર. અમને તમારું યોગદાન સુરક્ષિત રીતે પ્રાપ્ત થયું છે.\n\nરસીદ ID: ${receiptId}\n\nશુભેચ્છા,\nChanloPay ટીમ`,
@@ -52,39 +57,50 @@ async function sendWhatsAppReceipt(data: any, eventName: string, receiptId: stri
 
   const message = templates[data.language as 'en' | 'gu' | 'hi'] || templates.en;
   
-  console.log(`[FIREWALL SECURE] WhatsApp Triggered for ${data.mobile || 'Unknown'}`);
-
-  if (token && phoneId && data.mobile && data.mobile.length === 10) {
-    try {
-      const response = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: `91${data.mobile}`, // Assuming Indian numbers
-          type: "text",
-          text: {
-            preview_url: false,
-            body: message
-          }
-        }),
-      });
-
-      const result = await response.json();
-      console.log(`[WHATSAPP API RESULT]`, result);
-      return result.messages ? true : false;
-    } catch (error) {
-      console.error("[WHATSAPP API ERROR]", error);
-      return false;
-    }
+  // Sanitize mobile number (ensure 10 digits and add 91)
+  const sanitizedMobile = data.mobile.replace(/\D/g, '').slice(-10);
+  if (sanitizedMobile.length !== 10) {
+    console.error("[WHATSAPP] Invalid mobile number length:", data.mobile);
+    return false;
   }
 
-  console.log(`Content:\n${message}`);
-  return true;
+  const recipient = `91${sanitizedMobile}`;
+
+  console.log(`[WHATSAPP] Attempting to send message to ${recipient}`);
+
+  try {
+    const response = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: recipient,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: message
+        }
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("[WHATSAPP API ERROR DETAIL]", JSON.stringify(result, null, 2));
+      // Meta Error Code 131030 usually means a Template is required for the first message
+      return false;
+    }
+
+    console.log(`[WHATSAPP SUCCESS] Message ID:`, result.messages?.[0]?.id);
+    return true;
+  } catch (error) {
+    console.error("[WHATSAPP NETWORK ERROR]", error);
+    return false;
+  }
 }
 
 // --- API ACTIONS ---
@@ -120,8 +136,10 @@ export async function finalizeGuestPayment(
   const data = validation.data;
   const receiptId = `RCPT_${Math.random().toString(36).substring(7).toUpperCase()}`;
 
+  let receiptStatus: 'Sent' | 'Failed' | 'None' = 'None';
   if (data.mobile && data.mobile.length === 10) {
-    await sendWhatsAppReceipt(data, eventName, receiptId);
+    const wasSent = await sendWhatsAppReceipt(data, eventName, receiptId);
+    receiptStatus = wasSent ? 'Sent' : 'Failed';
   }
 
   const transactionData = {
@@ -131,7 +149,7 @@ export async function finalizeGuestPayment(
     receiptQrCode: `verified_${orderId}`,
     receiptId: receiptId,
     integrityHash,
-    receiptStatus: (data.mobile && data.mobile.length === 10) ? 'Sent' : 'None',
+    receiptStatus,
   };
 
   const txnRef = collection(firestore, `hosts/${data.hostId}/events/${data.eventId}/transactions`);
@@ -148,8 +166,10 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
   const data = validation.data;
   const receiptId = `RCPT_MAN_${Date.now().toString().slice(-6).toUpperCase()}`;
 
+  let receiptStatus: 'Sent' | 'Failed' | 'None' = 'None';
   if (data.mobile && data.mobile.length === 10) {
-    await sendWhatsAppReceipt(data, eventName, receiptId);
+    const wasSent = await sendWhatsAppReceipt(data, eventName, receiptId);
+    receiptStatus = wasSent ? 'Sent' : 'Failed';
   }
 
   const transactionData = {
@@ -161,7 +181,7 @@ export async function recordManualEntry(input: TransactionInput, eventName: stri
     paymentMethod: 'Cash',
     isManualEntry: true,
     manualEntryVerified: false,
-    receiptStatus: (data.mobile && data.mobile.length === 10) ? 'Sent' : 'None',
+    receiptStatus,
   };
 
   const txnRef = collection(firestore, `hosts/${data.hostId}/events/${data.eventId}/transactions`);
