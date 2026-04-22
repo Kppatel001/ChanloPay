@@ -14,7 +14,7 @@ import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import type { Event, Transaction } from '@/lib/types';
-import { CheckCircle2, ShieldCheck, TrendingUp, Calendar } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, TrendingUp, Calendar, IndianRupee } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -110,7 +110,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-secondary text-secondary-foreground border-none shadow-xl shadow-secondary/20 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-2 opacity-10">
-                    <CheckCircle2 className="h-24 w-24" />
+                    <IndianRupee className="h-24 w-24" />
                 </div>
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2">
@@ -122,14 +122,14 @@ export default function DashboardPage() {
                     <div className="text-3xl font-black">{formatCurrency(totalCollected)}</div>
                     <p className="text-[10px] mt-2 opacity-70 flex items-center gap-1">
                         <ShieldCheck className="h-3 w-3" />
-                        Direct Settlement Active
+                        Secure Digital Ledger Active
                     </p>
                 </CardContent>
             </Card>
 
-            <Card className="border-secondary/10 shadow-md">
+            <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <CardTitle className="text-sm font-bold text-maroon flex items-center gap-2 uppercase tracking-tight">
                         <Calendar className="h-4 w-4 text-accent" />
                         Active Events
                     </CardTitle>
@@ -139,29 +139,29 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-secondary/10 shadow-md">
+            <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Recent Payments</CardTitle>
+                    <CardTitle className="text-sm font-bold text-maroon uppercase tracking-tight">Recent Payments</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{transactions.length}</div>
                 </CardContent>
             </Card>
 
-            <Card className="border-secondary/10 shadow-md">
+            <Card className="border-accent/20 shadow-md">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Platform Status</CardTitle>
+                    <CardTitle className="text-sm font-bold text-maroon uppercase tracking-tight">System Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-secondary">Live</div>
+                    <div className="text-2xl font-bold text-secondary">Secured</div>
                 </CardContent>
             </Card>
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4 border-secondary/10">
+          <Card className="lg:col-span-4 border-accent/10">
             <CardHeader>
-              <CardTitle>Collection Trends</CardTitle>
+              <CardTitle className="text-maroon">Collection Trends</CardTitle>
               <CardDescription>Monthly growth of your digital registry.</CardDescription>
             </CardHeader>
             <CardContent>
