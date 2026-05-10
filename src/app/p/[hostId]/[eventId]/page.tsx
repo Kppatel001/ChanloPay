@@ -88,20 +88,18 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     window.location.href = upiUri;
   };
 
-  const handlePayNow = async (e: React.FormEvent) => {
+  const handleNextStep = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
     
-    // Attempt to open UPI App
-    triggerUpiApp();
-    
-    // Move to processing/confirmation step
+    // We NO LONGER trigger UPI app here automatically to avoid browser blocks.
+    // Instead we just move to the payment confirmation screen.
     setTimeout(() => {
         setStep('processing');
         setIsSubmitting(false);
-    }, 1000);
+    }, 600);
   };
 
   const handleFinalizeRecord = async () => {
@@ -183,7 +181,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                <CardTitle className="text-xl font-black text-[#7B1E2B] uppercase tracking-tighter">Shagun Registry</CardTitle>
                <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Enter details to provide gift</CardDescription>
             </CardHeader>
-            <form onSubmit={handlePayNow}>
+            <form onSubmit={handleNextStep}>
               <CardContent className="space-y-6 py-10 px-8">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Guest Full Name</Label>
@@ -281,7 +279,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                 >
                   {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : (
                     <>
-                        CONTINUE TO PAY
+                        NEXT: PAY SHAGUN
                         <ArrowRight className="ml-3 h-7 w-7 group-hover:translate-x-2 transition-transform" />
                     </>
                   )}
@@ -297,27 +295,32 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             <div className="mx-auto bg-[#FFF8E7] text-[#D4AF37] p-8 rounded-full w-fit mb-10 border-4 border-white shadow-xl">
               <Wallet className="h-16 w-16" />
             </div>
-            <CardTitle className="text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter mb-4">Payment Finished?</CardTitle>
+            <CardTitle className="text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter mb-4">Ready to Pay?</CardTitle>
             <p className="text-sm font-medium text-muted-foreground mb-12 px-2 leading-relaxed">
-              If you completed the payment in your UPI app, please confirm here to finalize your digital record.
+              Click the button below to open your preferred UPI app and complete the payment of <strong>₹{amount}</strong>.
             </p>
             <div className="space-y-4">
               <Button 
-                className="w-full h-20 text-xl font-black bg-[#2E7D32] hover:bg-[#2E7D32]/90 text-white rounded-[1.5rem] shadow-2xl shadow-green-900/20 transition-all active:scale-95" 
+                variant="default"
+                className="w-full h-20 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-[1.5rem] shadow-2xl shadow-[#1A237E]/20 transition-all active:scale-95" 
+                onClick={triggerUpiApp}
+              >
+                PAY NOW (OPEN UPI APP)
+              </Button>
+
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">After Paying</span></div>
+              </div>
+
+              <Button 
+                className="w-full h-16 text-lg font-black bg-[#2E7D32] hover:bg-[#2E7D32]/90 text-white rounded-[1.5rem] shadow-xl shadow-green-900/10 transition-all active:scale-95" 
                 onClick={handleFinalizeRecord}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : 'YES, RECORD MY GIFT'}
+                {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : 'YES, I HAVE PAID'}
               </Button>
               
-              <Button 
-                variant="outline"
-                className="w-full h-16 text-lg font-black border-[#1A237E] text-[#1A237E] rounded-[1.5rem] hover:bg-[#1A237E]/5 transition-all active:scale-95" 
-                onClick={triggerUpiApp}
-              >
-                OPEN UPI APP AGAIN
-              </Button>
-
               <div className="flex flex-col gap-2 pt-4">
                 <Button 
                     variant="ghost" 
@@ -325,14 +328,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     onClick={() => setStep('details')}
                 >
                     <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
-                    EDIT PAYMENT DETAILS
-                </Button>
-                <Button 
-                    variant="link" 
-                    className="text-destructive font-black text-[10px] uppercase tracking-[0.2em]"
-                    onClick={() => window.location.reload()}
-                >
-                    CANCEL TRANSACTION
+                    BACK TO EDIT DETAILS
                 </Button>
               </div>
             </div>
