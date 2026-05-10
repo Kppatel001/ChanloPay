@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, use, useEffect } from 'react';
+import { useState, use, useEffect, useMemo } from 'react';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -66,6 +66,16 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const { data: hostProfile, isLoading: hostLoading } = useDoc<Host>(hostRef);
   const { data: eventData, isLoading: eventLoading } = useDoc<Event>(eventRef);
 
+  const upiUri = useMemo(() => {
+    if (!hostProfile?.upi || !amount) return '#';
+    const cleanAmount = parseFloat(amount);
+    if (isNaN(cleanAmount)) return '#';
+
+    const pn = encodeURIComponent(hostProfile.name || 'Host');
+    const tn = encodeURIComponent(`${eventData?.eventName || 'Shagun'} Gift`);
+    return `upi://pay?pa=${hostProfile.upi}&pn=${pn}&tn=${tn}&am=${cleanAmount.toFixed(2)}&cu=INR`;
+  }, [hostProfile, eventData, amount]);
+
   const validateForm = () => {
     if (!guestName.trim()) {
       toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter your name for the registry.' });
@@ -82,24 +92,17 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     return true;
   };
 
-  const triggerUpiApp = () => {
-    if (!hostProfile?.upi) return;
-    const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Event Host')}&tn=${encodeURIComponent(eventData?.eventName || 'Shagun')}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
-    window.location.href = upiUri;
-  };
-
   const handleNextStep = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
     
-    // We NO LONGER trigger UPI app here automatically to avoid browser blocks.
-    // Instead we just move to the payment confirmation screen.
+    // Switch to payment app selection screen
     setTimeout(() => {
         setStep('processing');
         setIsSubmitting(false);
-    }, 600);
+    }, 400);
   };
 
   const handleFinalizeRecord = async () => {
@@ -117,7 +120,6 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         language: language,
       };
 
-      // 1. Finalize record in database
       const order = await initiateSecureGuestPayment(transactionData);
       const result = await finalizeGuestPayment(
         order.orderId,
@@ -301,11 +303,12 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
             </p>
             <div className="space-y-4">
               <Button 
-                variant="default"
+                asChild
                 className="w-full h-20 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-[1.5rem] shadow-2xl shadow-[#1A237E]/20 transition-all active:scale-95" 
-                onClick={triggerUpiApp}
               >
-                PAY NOW (OPEN UPI APP)
+                <a href={upiUri}>
+                  PAY NOW (OPEN UPI APP)
+                </a>
               </Button>
 
               <div className="relative py-4">
