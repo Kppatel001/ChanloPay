@@ -18,12 +18,10 @@ import {
   Languages, 
   ShieldCheck, 
   Wallet, 
-  X, 
   ArrowRight, 
   Check, 
-  AlertCircle,
   MessageCircle,
-  Share2
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
@@ -92,17 +90,19 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     return true;
   };
 
-  const handleNextStep = async (e: React.FormEvent) => {
+  const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    setStep('processing');
+  };
 
-    setIsSubmitting(true);
-    
-    // Switch to payment selection screen
-    setTimeout(() => {
-        setStep('processing');
-        setIsSubmitting(false);
-    }, 300);
+  const handlePayNow = () => {
+    if (!upiUri) {
+      toast({ variant: 'destructive', title: 'Error', description: 'UPI payment information is missing.' });
+      return;
+    }
+    // Deep linking directly to the UPI app protocol
+    window.location.href = upiUri;
   };
 
   const handleFinalizeRecord = async () => {
@@ -278,44 +278,33 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               <CardFooter className="pt-2 pb-10 px-8">
                 <Button 
                   type="submit" 
-                  disabled={isSubmitting}
                   className="w-full h-20 text-2xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-2xl shadow-[#1A237E]/30 rounded-[1.5rem] group transition-all active:scale-95"
                 >
-                  {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : (
-                    <>
-                        NEXT: PAY SHAGUN
-                        <ArrowRight className="ml-3 h-7 w-7 group-hover:translate-x-2 transition-transform" />
-                    </>
-                  )}
+                  NEXT: PAY SHAGUN
+                  <ArrowRight className="ml-3 h-7 w-7 group-hover:translate-x-2 transition-transform" />
                 </Button>
               </CardFooter>
             </form>
           </Card>
         )}
 
-        {/* STEP 2: POST-PAYMENT CONFIRMATION */}
+        {/* STEP 2: PAYMENT LAUNCH SCREEN */}
         {step === 'processing' && (
           <Card className="w-full shadow-2xl border-none p-12 text-center animate-in zoom-in duration-500 rounded-[2.5rem] bg-white">
             <div className="mx-auto bg-[#FFF8E7] text-[#D4AF37] p-8 rounded-full w-fit mb-10 border-4 border-white shadow-xl">
               <Wallet className="h-16 w-16" />
             </div>
-            <CardTitle className="text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter mb-4">Ready to Pay?</CardTitle>
+            <CardTitle className="text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter mb-4">Launch Payment App</CardTitle>
             <p className="text-sm font-medium text-muted-foreground mb-12 px-2 leading-relaxed">
               Click the button below to open your preferred UPI app and complete the payment of <strong>₹{amount}</strong>.
             </p>
             <div className="space-y-4">
               <Button 
-                asChild
                 className="w-full h-20 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-[1.5rem] shadow-2xl shadow-[#1A237E]/20 transition-all active:scale-95" 
+                onClick={handlePayNow}
                 disabled={!upiUri}
               >
-                {upiUri ? (
-                  <a href={upiUri}>
-                    PAY NOW (OPEN UPI APP)
-                  </a>
-                ) : (
-                  <span className="opacity-50">UPI ID MISSING IN PROFILE</span>
-                )}
+                {upiUri ? 'PAY NOW (OPEN UPI APP)' : 'UPI ID MISSING IN PROFILE'}
               </Button>
 
               <div className="relative py-4">
@@ -424,3 +413,4 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     </div>
   );
 }
+
