@@ -96,15 +96,6 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     setStep('processing');
   };
 
-  const handlePayNow = () => {
-    if (!upiUri) {
-      toast({ variant: 'destructive', title: 'Error', description: 'UPI payment information is missing.' });
-      return;
-    }
-    // Deep linking directly to the UPI app protocol
-    window.location.href = upiUri;
-  };
-
   const handleFinalizeRecord = async () => {
     if (!guestName.trim() || !amount) return;
     
@@ -299,13 +290,21 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               Click the button below to open your preferred UPI app and complete the payment of <strong>₹{amount}</strong>.
             </p>
             <div className="space-y-4">
-              <Button 
-                className="w-full h-20 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-[1.5rem] shadow-2xl shadow-[#1A237E]/20 transition-all active:scale-95" 
-                onClick={handlePayNow}
-                disabled={!upiUri}
-              >
-                {upiUri ? 'PAY NOW (OPEN UPI APP)' : 'UPI ID MISSING IN PROFILE'}
-              </Button>
+              {upiUri ? (
+                <Button 
+                  asChild
+                  className="w-full h-20 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-[1.5rem] shadow-2xl shadow-[#1A237E]/20 transition-all active:scale-95 flex items-center justify-center" 
+                >
+                  <a href={upiUri}>PAY NOW (OPEN UPI APP)</a>
+                </Button>
+              ) : (
+                <Button 
+                  disabled
+                  className="w-full h-20 text-xl font-black bg-muted text-muted-foreground rounded-[1.5rem]" 
+                >
+                  UPI ID MISSING IN PROFILE
+                </Button>
+              )}
 
               <div className="relative py-4">
                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
@@ -413,4 +412,3 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     </div>
   );
 }
-
