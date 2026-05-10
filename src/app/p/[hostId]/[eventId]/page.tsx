@@ -67,9 +67,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const { data: eventData, isLoading: eventLoading } = useDoc<Event>(eventRef);
 
   const upiUri = useMemo(() => {
-    if (!hostProfile?.upi || !amount) return '#';
+    if (!hostProfile?.upi || !amount) return null;
     const cleanAmount = parseFloat(amount);
-    if (isNaN(cleanAmount)) return '#';
+    if (isNaN(cleanAmount) || cleanAmount <= 0) return null;
 
     const pn = encodeURIComponent(hostProfile.name || 'Host');
     const tn = encodeURIComponent(`${eventData?.eventName || 'Shagun'} Gift`);
@@ -98,14 +98,16 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
     setIsSubmitting(true);
     
-    // Switch to payment app selection screen
+    // Switch to payment selection screen
     setTimeout(() => {
         setStep('processing');
         setIsSubmitting(false);
-    }, 400);
+    }, 300);
   };
 
   const handleFinalizeRecord = async () => {
+    if (!guestName.trim() || !amount) return;
+    
     setIsSubmitting(true);
     try {
       const transactionData = {
@@ -305,10 +307,15 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               <Button 
                 asChild
                 className="w-full h-20 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-[1.5rem] shadow-2xl shadow-[#1A237E]/20 transition-all active:scale-95" 
+                disabled={!upiUri}
               >
-                <a href={upiUri}>
-                  PAY NOW (OPEN UPI APP)
-                </a>
+                {upiUri ? (
+                  <a href={upiUri}>
+                    PAY NOW (OPEN UPI APP)
+                  </a>
+                ) : (
+                  <span className="opacity-50">UPI ID MISSING IN PROFILE</span>
+                )}
               </Button>
 
               <div className="relative py-4">
