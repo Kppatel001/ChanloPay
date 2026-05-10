@@ -225,9 +225,9 @@ export default function EventsPage() {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
   const getUpiQrUrl = (event: Event) => {
-    if (!hostProfile?.upi) return null;
-    const upiIntent = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Host')}&tn=${encodeURIComponent(event.eventName)}&cu=INR`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiIntent)}`;
+    if (!hostProfile?.upi || !user?.uid || !event.id) return null;
+    const guestPortalUrl = `${origin}/p/${user.uid}/${event.id}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(guestPortalUrl)}`;
   };
 
   return (
@@ -409,9 +409,9 @@ export default function EventsPage() {
             {selectedEventForQr && (
               <div className="flex flex-col items-center">
                 <div className="bg-primary w-full p-6 text-primary-foreground text-center">
-                  <DialogTitle className="text-2xl font-black uppercase tracking-tight">Event Payment QR</DialogTitle>
+                  <DialogTitle className="text-2xl font-black uppercase tracking-tight">Event Guest QR</DialogTitle>
                   <DialogDescription className="text-primary-foreground/80 font-medium">
-                    {selectedEventForQr.eventName} • {hostProfile?.name}
+                    {selectedEventForQr.eventName} • Scan to Provide Details
                   </DialogDescription>
                 </div>
                 
@@ -421,7 +421,7 @@ export default function EventsPage() {
                       <>
                         <img 
                           src={getUpiQrUrl(selectedEventForQr)!} 
-                          alt="UPI QR Code" 
+                          alt="Guest Portal QR Code" 
                           className="w-64 h-64 md:w-80 md:h-80 object-contain"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl">
@@ -435,7 +435,7 @@ export default function EventsPage() {
                       <div className="flex flex-col items-center gap-2 text-destructive font-bold p-4 text-center">
                         <AlertCircle className="h-10 w-10" />
                         <p>UPI ID Required</p>
-                        <p className="text-[10px] text-muted-foreground font-normal">Add your UPI ID in Settings to see the QR code.</p>
+                        <p className="text-[10px] text-muted-foreground font-normal">Add your UPI ID in Settings to enable Guest QR.</p>
                       </div>
                     )}
                   </div>
@@ -459,8 +459,8 @@ export default function EventsPage() {
                       <TrendingUp className="h-5 w-5" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Instant Settlement</p>
-                      <p className="text-xs font-bold text-primary">Payments go directly to your Bank Account via UPI.</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Verified Ledger</p>
+                      <p className="text-xs font-bold text-primary">Guests scan to fill their name & pay via UPI.</p>
                     </div>
                   </div>
                 </div>
@@ -483,14 +483,14 @@ export default function EventsPage() {
             
             <div className="text-center mb-8">
               <h1 className="text-4xl md:text-6xl font-black text-primary uppercase mb-2">{selectedEventForQr.eventName}</h1>
-              <p className="text-xl md:text-2xl text-muted-foreground font-bold uppercase tracking-widest">Scan to pay Shagun</p>
+              <p className="text-xl md:text-2xl text-muted-foreground font-bold uppercase tracking-widest">Scan to Provide Details & Pay Shagun</p>
             </div>
 
             <div className="bg-white p-6 md:p-12 rounded-[3rem] shadow-2xl border-8 border-primary/5">
               {getUpiQrUrl(selectedEventForQr) && (
                 <img 
                   src={getUpiQrUrl(selectedEventForQr)!} 
-                  alt="Full Screen UPI QR" 
+                  alt="Full Screen Guest QR" 
                   className="w-[70vw] h-[70vw] max-w-[500px] max-h-[500px]"
                 />
               )}
@@ -498,7 +498,7 @@ export default function EventsPage() {
 
             <div className="mt-12 flex flex-col items-center gap-4">
                <Badge className="text-xl px-6 py-2 rounded-full bg-primary text-white font-black uppercase tracking-tighter">
-                 Verified Digital Ledger
+                 Secure Guest Portal
                </Badge>
                <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Powered by ChanloPay</p>
             </div>
