@@ -127,7 +127,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   };
 
   const getUpiQrUrl = () => {
-    if (!hostProfile?.upi || !eventData) return '';
+    if (!hostProfile?.upi || !eventData) return null;
     const upiIntent = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiIntent)}`;
   };
@@ -314,7 +314,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   <div className="flex flex-col items-center gap-4 p-4 bg-muted/20 rounded-2xl animate-in slide-in-from-top duration-300">
                      <p className="text-[10px] font-bold uppercase text-muted-foreground">Scan with any UPI App</p>
                      <div className="bg-white p-2 rounded-xl border-4 border-primary/10">
-                        <img src={getUpiQrUrl()} alt="Payment QR" className="w-48 h-48" />
+                        {getUpiQrUrl() && (
+                          <img src={getUpiQrUrl()!} alt="Payment QR" className="w-48 h-48" />
+                        )}
                      </div>
                      <Button variant="ghost" size="sm" className="text-[10px]" onClick={() => setShowQrAlt(false)}>Hide QR Code</Button>
                   </div>

@@ -225,7 +225,7 @@ export default function EventsPage() {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
   const getUpiQrUrl = (event: Event) => {
-    if (!hostProfile?.upi) return '';
+    if (!hostProfile?.upi) return null;
     const upiIntent = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Host')}&tn=${encodeURIComponent(event.eventName)}&cu=INR`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiIntent)}`;
   };
@@ -401,11 +401,13 @@ export default function EventsPage() {
                 
                 <div className="p-8 flex flex-col items-center gap-6 w-full">
                   <div className="bg-white p-4 rounded-3xl shadow-xl border-4 border-primary/10 relative group">
-                    <img 
-                      src={getUpiQrUrl(selectedEventForQr)} 
-                      alt="UPI QR Code" 
-                      className="w-64 h-64 md:w-80 md:h-80 object-contain"
-                    />
+                    {getUpiQrUrl(selectedEventForQr) && (
+                      <img 
+                        src={getUpiQrUrl(selectedEventForQr)!} 
+                        alt="UPI QR Code" 
+                        className="w-64 h-64 md:w-80 md:h-80 object-contain"
+                      />
+                    )}
                     <div className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl">
                        <Button size="lg" variant="secondary" onClick={() => setIsQrFullScreen(true)}>
                          <Maximize2 className="mr-2 h-5 w-5" />
@@ -461,11 +463,13 @@ export default function EventsPage() {
             </div>
 
             <div className="bg-white p-6 md:p-12 rounded-[3rem] shadow-2xl border-8 border-primary/5">
-              <img 
-                src={getUpiQrUrl(selectedEventForQr)} 
-                alt="Full Screen UPI QR" 
-                className="w-[70vw] h-[70vw] max-w-[500px] max-h-[500px]"
-              />
+              {getUpiQrUrl(selectedEventForQr) && (
+                <img 
+                  src={getUpiQrUrl(selectedEventForQr)!} 
+                  alt="Full Screen UPI QR" 
+                  className="w-[70vw] h-[70vw] max-w-[500px] max-h-[500px]"
+                />
+              )}
             </div>
 
             <div className="mt-12 flex flex-col items-center gap-4">
