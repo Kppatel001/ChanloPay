@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp, Wallet2, CheckCircle2, PlayCircle, StopCircle } from 'lucide-react';
+import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp, Wallet2, CheckCircle2, PlayCircle, StopCircle, QrCode, Download, Maximize2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { recordManualEntry, requestWithdrawal } from '@/app/actions/api';
+import Image from 'next/image';
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -92,6 +93,10 @@ export default function EventsPage() {
   const [guestLanguage, setGuestLanguage] = useState('en');
   const [isRecordingTransaction, setIsRecordingTransaction] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState<string | null>(null);
+
+  // QR Code State
+  const [selectedEventForQr, setSelectedEventForQr] = useState<Event | null>(null);
+  const [isQrFullScreen, setIsQrFullScreen] = useState(false);
   
   const handleOpenCreateEventDialog = () => {
     const isProfileComplete = !!(hostProfile && hostProfile.name && hostProfile.mobile && hostProfile.upi);
@@ -219,6 +224,12 @@ export default function EventsPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
+  const getUpiQrUrl = (event: Event) => {
+    if (!hostProfile?.upi) return '';
+    const upiIntent = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Host')}&tn=${encodeURIComponent(event.eventName)}&cu=INR`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiIntent)}`;
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header pageTitle="Events" />
@@ -333,6 +344,11 @@ export default function EventsPage() {
                         </div>
                         </DialogContent>
                     </Dialog>
+                    
+                    <Button variant="outline" size="icon" className="h-10 w-10 text-primary" title="View QR" onClick={() => setSelectedEventForQr(event)}>
+                      <QrCode className="h-5 w-5" />
+                    </Button>
+
                     <div className="flex gap-1">
                       {isLive ? (
                         <Button variant="secondary" size="icon" className="h-10 w-10 text-amber-600" title="Mark Completed" onClick={() => handleUpdateStatus(event.id!, 'Completed')}>
@@ -370,6 +386,96 @@ export default function EventsPage() {
             );
           })}
         </div>
+
+        {/* Dynamic QR Code Modal */}
+        <Dialog open={!!selectedEventForQr} onOpenChange={(open) => !open && setSelectedEventForQr(null)}>
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl">
+            {selectedEventForQr && (
+              <div className="flex flex-col items-center">
+                <div className="bg-primary w-full p-6 text-primary-foreground text-center">
+                  <DialogTitle className="text-2xl font-black uppercase tracking-tight">Event Payment QR</DialogTitle>
+                  <DialogDescription className="text-primary-foreground/80 font-medium">
+                    {selectedEventForQr.eventName} • {hostProfile?.name}
+                  </DialogDescription>
+                </div>
+                
+                <div className="p-8 flex flex-col items-center gap-6 w-full">
+                  <div className="bg-white p-4 rounded-3xl shadow-xl border-4 border-primary/10 relative group">
+                    <img 
+                      src={getUpiQrUrl(selectedEventForQr)} 
+                      alt="UPI QR Code" 
+                      className="w-64 h-64 md:w-80 md:h-80 object-contain"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl">
+                       <Button size="lg" variant="secondary" onClick={() => setIsQrFullScreen(true)}>
+                         <Maximize2 className="mr-2 h-5 w-5" />
+                         Full Screen
+                       </Button>
+                    </div>
+                  </div>
+
+                  <div className="w-full grid grid-cols-2 gap-3">
+                    <Button className="w-full font-bold" onClick={() => {
+                       navigator.clipboard.writeText(`${origin}/p/${user?.uid}/${selectedEventForQr.id}`);
+                       toast({ title: "Link Copied" });
+                    }}>
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Share Link
+                    </Button>
+                    <Button variant="outline" className="w-full font-bold" onClick={() => window.print()}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Print QR
+                    </Button>
+                  </div>
+
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-center gap-3 w-full">
+                    <div className="bg-primary/10 p-2 rounded-full text-primary">
+                      <TrendingUp className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Instant Settlement</p>
+                      <p className="text-xs font-bold text-primary">Payments go directly to your Bank Account via UPI.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Full Screen QR Modal */}
+        {isQrFullScreen && selectedEventForQr && (
+          <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-8 animate-in fade-in duration-300">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-4 right-4 h-12 w-12 rounded-full"
+              onClick={() => setIsQrFullScreen(false)}
+            >
+              <X className="h-8 w-8 text-primary" />
+            </Button>
+            
+            <div className="text-center mb-8">
+              <h1 className="text-4xl md:text-6xl font-black text-primary uppercase mb-2">{selectedEventForQr.eventName}</h1>
+              <p className="text-xl md:text-2xl text-muted-foreground font-bold uppercase tracking-widest">Scan to pay Shagun</p>
+            </div>
+
+            <div className="bg-white p-6 md:p-12 rounded-[3rem] shadow-2xl border-8 border-primary/5">
+              <img 
+                src={getUpiQrUrl(selectedEventForQr)} 
+                alt="Full Screen UPI QR" 
+                className="w-[70vw] h-[70vw] max-w-[500px] max-h-[500px]"
+              />
+            </div>
+
+            <div className="mt-12 flex flex-col items-center gap-4">
+               <Badge className="text-xl px-6 py-2 rounded-full bg-primary text-white font-black uppercase tracking-tighter">
+                 Verified Digital Ledger
+               </Badge>
+               <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Powered by ChanloPay</p>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

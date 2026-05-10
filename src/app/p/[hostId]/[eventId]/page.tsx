@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, Sparkles, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
+import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, Sparkles, AlertCircle, ExternalLink, Copy, Check, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -33,6 +33,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isFinalized, setIsFinalized] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [showQrAlt, setShowQrAlt] = useState(false);
 
   const hostRef = useMemoFirebase(() => {
     return doc(firestore, `hosts/${resolvedParams.hostId}`);
@@ -123,6 +124,12 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     navigator.clipboard.writeText(hostProfile.upi);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const getUpiQrUrl = () => {
+    if (!hostProfile?.upi || !eventData) return '';
+    const upiIntent = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiIntent)}`;
   };
 
   if (hostLoading || eventLoading) {
@@ -297,6 +304,21 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   </div>
                   <span className="text-[9px] md:text-[10px] font-medium opacity-80">(GPay, PhonePe, Paytm)</span>
                 </Button>
+
+                {!showQrAlt ? (
+                  <Button variant="ghost" className="w-full text-xs font-bold text-muted-foreground" onClick={() => setShowQrAlt(true)}>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Show QR Code (to scan from other device)
+                  </Button>
+                ) : (
+                  <div className="flex flex-col items-center gap-4 p-4 bg-muted/20 rounded-2xl animate-in slide-in-from-top duration-300">
+                     <p className="text-[10px] font-bold uppercase text-muted-foreground">Scan with any UPI App</p>
+                     <div className="bg-white p-2 rounded-xl border-4 border-primary/10">
+                        <img src={getUpiQrUrl()} alt="Payment QR" className="w-48 h-48" />
+                     </div>
+                     <Button variant="ghost" size="sm" className="text-[10px]" onClick={() => setShowQrAlt(false)}>Hide QR Code</Button>
+                  </div>
+                )}
 
                 <Alert className="bg-amber-50 border-amber-200 py-3">
                   <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
