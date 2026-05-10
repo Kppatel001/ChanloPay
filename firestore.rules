@@ -45,8 +45,11 @@ service cloud.firestore {
      * Controls access to individual Host profiles and all nested data.
      */
     match /hosts/{hostId} {
-      // Admin can see all hosts
-      allow read: if isAdmin() || isOwner(hostId);
+      // GUESTS: Required for guest portal to show Host name and UPI ID
+      allow get: if true;
+      // ADMINS/OWNERS: Full read for dashboard/settings/directory
+      allow list: if isAdmin() || isOwner(hostId);
+      // OWNERS: Profile updates
       allow write: if isOwner(hostId);
 
       match /events/{eventId} {
