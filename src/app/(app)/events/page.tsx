@@ -224,7 +224,7 @@ export default function EventsPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
-  const getUpiQrUrl = (event: Event) => {
+  const getGuestPortalQrUrl = (event: Event) => {
     if (!hostProfile?.upi || !user?.uid || !event.id) return null;
     const guestPortalUrl = `${origin}/p/${user.uid}/${event.id}`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(guestPortalUrl)}`;
@@ -289,8 +289,8 @@ export default function EventsPage() {
                     <Badge variant="outline" className="text-[10px]">{stats.count} Records</Badge>
                   </div>
                   <div className="space-y-1 mt-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> {new Date(event.eventDate).toLocaleDateString()}</div>
-                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> {event.location}</div>
+                    <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-[#7B1E2B]" /> {new Date(event.eventDate).toLocaleDateString()}</div>
+                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#7B1E2B]" /> {event.location}</div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -348,7 +348,7 @@ export default function EventsPage() {
                     <Button 
                       variant="outline" 
                       size="icon" 
-                      className="h-10 w-10 text-primary" 
+                      className="h-10 w-10 text-primary border-[#1A237E]/20" 
                       title="View QR" 
                       onClick={() => {
                         if (!hostProfile?.upi) {
@@ -362,7 +362,7 @@ export default function EventsPage() {
                         setSelectedEventForQr(event);
                       }}
                     >
-                      <QrCode className="h-5 w-5" />
+                      <QrCode className="h-5 w-5 text-[#1A237E]" />
                     </Button>
 
                     <div className="flex gap-1">
@@ -388,7 +388,7 @@ export default function EventsPage() {
                     </div>
                   ) : (
                     <Button 
-                        className="w-full font-bold uppercase tracking-wider text-[10px]" 
+                        className="w-full font-bold uppercase tracking-wider text-[10px] bg-[#1A237E] hover:bg-[#1A237E]/90" 
                         variant={!isLive ? "default" : "secondary"}
                         onClick={() => handleWithdraw(event)}
                         disabled={isWithdrawing === event.id || stats.total <= 0}
@@ -405,30 +405,27 @@ export default function EventsPage() {
 
         {/* Dynamic QR Code Modal */}
         <Dialog open={!!selectedEventForQr} onOpenChange={(open) => !open && setSelectedEventForQr(null)}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl">
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl bg-[#FFF8E7]">
             {selectedEventForQr && (
               <div className="flex flex-col items-center">
-                <div className="bg-primary w-full p-6 text-primary-foreground text-center">
-                  <DialogTitle className="text-2xl font-black uppercase tracking-tight">Event Guest QR</DialogTitle>
-                  <DialogDescription className="text-primary-foreground/80 font-medium">
+                <div className="bg-[#7B1E2B] w-full p-6 text-white text-center">
+                  <DialogTitle className="text-2xl font-black uppercase tracking-tight">Guest Entry QR</DialogTitle>
+                  <DialogDescription className="text-white/80 font-medium">
                     {selectedEventForQr.eventName} • Scan to Provide Details
                   </DialogDescription>
                 </div>
                 
                 <div className="p-8 flex flex-col items-center gap-6 w-full">
-                  <div className="bg-white p-4 rounded-3xl shadow-xl border-4 border-primary/10 relative group min-h-[256px] flex items-center justify-center">
-                    {getUpiQrUrl(selectedEventForQr) ? (
+                  <div className="bg-white p-4 rounded-[2rem] shadow-xl border-4 border-[#7B1E2B]/5 relative group min-h-[256px] flex items-center justify-center cursor-pointer" onClick={() => setIsQrFullScreen(true)}>
+                    {getGuestPortalQrUrl(selectedEventForQr) ? (
                       <>
                         <img 
-                          src={getUpiQrUrl(selectedEventForQr)!} 
+                          src={getGuestPortalQrUrl(selectedEventForQr)!} 
                           alt="Guest Portal QR Code" 
                           className="w-64 h-64 md:w-80 md:h-80 object-contain"
                         />
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl">
-                           <Button size="lg" variant="secondary" onClick={() => setIsQrFullScreen(true)}>
-                             <Maximize2 className="mr-2 h-5 w-5" />
-                             Full Screen
-                           </Button>
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]">
+                           <Maximize2 className="h-10 w-10 text-[#7B1E2B]" />
                         </div>
                       </>
                     ) : (
@@ -440,28 +437,23 @@ export default function EventsPage() {
                     )}
                   </div>
 
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-black text-[#7B1E2B]">Scan with Any UPI App</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Guests scan to fill name & pay Shagun</p>
+                  </div>
+
                   <div className="w-full grid grid-cols-2 gap-3">
-                    <Button className="w-full font-bold" disabled={!hostProfile?.upi} onClick={() => {
+                    <Button className="w-full font-bold bg-[#1A237E] hover:bg-[#1A237E]/90" disabled={!hostProfile?.upi} onClick={() => {
                        navigator.clipboard.writeText(`${origin}/p/${user?.uid}/${selectedEventForQr.id}`);
                        toast({ title: "Link Copied" });
                     }}>
                       <Share2 className="mr-2 h-4 w-4" />
                       Share Link
                     </Button>
-                    <Button variant="outline" className="w-full font-bold" disabled={!hostProfile?.upi} onClick={() => window.print()}>
+                    <Button variant="outline" className="w-full font-bold border-[#7B1E2B]/20 text-[#7B1E2B]" disabled={!hostProfile?.upi} onClick={() => window.print()}>
                       <Download className="mr-2 h-4 w-4" />
                       Print QR
                     </Button>
-                  </div>
-
-                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-center gap-3 w-full">
-                    <div className="bg-primary/10 p-2 rounded-full text-primary">
-                      <TrendingUp className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Verified Ledger</p>
-                      <p className="text-xs font-bold text-primary">Guests scan to fill their name & pay via UPI.</p>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -478,29 +470,29 @@ export default function EventsPage() {
               className="absolute top-4 right-4 h-12 w-12 rounded-full"
               onClick={() => setIsQrFullScreen(false)}
             >
-              <X className="h-8 w-8 text-primary" />
+              <X className="h-8 w-8 text-[#7B1E2B]" />
             </Button>
             
             <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-6xl font-black text-primary uppercase mb-2">{selectedEventForQr.eventName}</h1>
+              <h1 className="text-4xl md:text-6xl font-black text-[#7B1E2B] uppercase mb-2">{selectedEventForQr.eventName}</h1>
               <p className="text-xl md:text-2xl text-muted-foreground font-bold uppercase tracking-widest">Scan to Provide Details & Pay Shagun</p>
             </div>
 
-            <div className="bg-white p-6 md:p-12 rounded-[3rem] shadow-2xl border-8 border-primary/5">
-              {getUpiQrUrl(selectedEventForQr) && (
+            <div className="bg-white p-6 md:p-12 rounded-[3rem] shadow-2xl border-8 border-[#7B1E2B]/5">
+              {getGuestPortalQrUrl(selectedEventForQr) && (
                 <img 
-                  src={getUpiQrUrl(selectedEventForQr)!} 
+                  src={getGuestPortalQrUrl(selectedEventForQr)!} 
                   alt="Full Screen Guest QR" 
-                  className="w-[70vw] h-[70vw] max-w-[500px] max-h-[500px]"
+                  className="w-[75vw] h-[75vw] max-w-[500px] max-h-[500px]"
                 />
               )}
             </div>
 
             <div className="mt-12 flex flex-col items-center gap-4">
-               <Badge className="text-xl px-6 py-2 rounded-full bg-primary text-white font-black uppercase tracking-tighter">
+               <Badge className="text-xl px-6 py-2 rounded-full bg-[#1A237E] text-white font-black uppercase tracking-tighter">
                  Secure Guest Portal
                </Badge>
-               <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Powered by ChanloPay</p>
+               <p className="text-[#7B1E2B] text-sm font-bold uppercase tracking-widest">Scan with GPay • PhonePe • Paytm</p>
             </div>
           </div>
         )}
