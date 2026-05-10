@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase/firestore';
 export type Transaction = {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   mobile?: string;
   village?: string;
   amount: number;
@@ -14,9 +14,9 @@ export type Transaction = {
   eventName?: string;
   eventId?: string;
   hostId?: string;
-  paymentMethod?: string;
+  paymentMethod?: 'UPI' | 'Cash' | 'Gateway';
   receiptQrCode?: string;
-  receiptStatus?: 'Sent' | 'Failed' | 'Pending';
+  receiptStatus?: 'Sent' | 'Failed' | 'Pending' | 'None';
   receiptId?: string;
   integrityHash?: string;
   language?: 'en' | 'gu' | 'hi';

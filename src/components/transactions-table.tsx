@@ -24,24 +24,13 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileDown, Loader2, User, Trash2, Home, RefreshCw, MessageCircle, Phone, Eye, Download, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { FileDown, Loader2, User, Trash2, Home, RefreshCw, MessageCircle, Phone, Eye, Download, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -52,8 +41,6 @@ import {
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Logo } from '@/components/icons';
 
 interface jsPDFWithAutoTable extends jsPDF {
@@ -113,11 +100,11 @@ export function TransactionsTable() {
                 name: data.name || 'Guest',
                 village: data.village || 'N/A',
                 mobile: data.mobile || 'N/A',
-                email: data.email || 'N/A',
                 status: data.status || 'Success',
                 type: data.type || 'Gift',
                 receiptStatus: data.receiptStatus,
                 receiptId: data.receiptId,
+                paymentMethod: data.paymentMethod,
                 date: data.transactionDate
                     ? new Date(data.transactionDate)
                     : new Date(),
@@ -144,28 +131,6 @@ export function TransactionsTable() {
     fetchAllTransactions();
   }, [firestore, user]);
 
-  const handleDeleteTransaction = async (transactionId: string, eventId?: string) => {
-    if (!user || !firestore || !eventId) return;
-
-    const txnRef = doc(firestore, `hosts/${user.uid}/events/${eventId}/transactions`, transactionId);
-
-    deleteDoc(txnRef)
-      .then(() => {
-        toast({
-          title: "Payment Deleted",
-          description: "The record has been removed.",
-        });
-        setTransactions(prev => prev.filter(t => t.id !== transactionId));
-      })
-      .catch(async () => {
-        const permissionError = new FirestorePermissionError({
-          path: txnRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
-  };
-
   const handleViewReceipt = (t: Transaction) => {
     setSelectedTransaction(t);
     setIsReceiptOpen(true);
@@ -185,13 +150,14 @@ export function TransactionsTable() {
   const handleExportPDF = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     doc.autoTable({
-      head: [['Event', 'Guest Name', 'Village', 'Amount', 'Date']],
+      head: [['Event', 'Guest Name', 'Village', 'Amount', 'Date', 'Method']],
       body: transactions.map((t) => [
         t.eventName,
         t.name,
         t.village || 'N/A',
         formatCurrency(t.amount),
         t.date.toLocaleDateString(),
+        t.paymentMethod || 'UPI'
       ]),
     });
     doc.save('guest_payments.pdf');
@@ -205,6 +171,7 @@ export function TransactionsTable() {
         Village: t.village || 'N/A',
         Amount: t.amount,
         Date: t.date,
+        Method: t.paymentMethod || 'UPI'
       }))
     );
     const workbook = XLSX.utils.book_new();
@@ -216,7 +183,7 @@ export function TransactionsTable() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Guest Payment History</CardTitle>
+          <CardTitle>Digital Ledger</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex h-48 items-center justify-center">
@@ -231,24 +198,29 @@ export function TransactionsTable() {
     <>
       <Card>
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <CardTitle>Guest Payment History</CardTitle>
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-black uppercase tracking-tighter">Verified Ledger</CardTitle>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3" /> Permanent Transaction Records
+            </p>
+          </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => fetchAllTransactions()}>
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none font-bold" onClick={() => fetchAllTransactions()}>
                <RefreshCw className="mr-2 h-4 w-4" />
                Refresh
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                <Button variant="outline" size="sm" className="flex-1 sm:flex-none font-bold">
                   <FileDown className="mr-2 h-4 w-4" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportPDF}>
+                <DropdownMenuItem onClick={handleExportPDF} className="font-bold">
                   Export as PDF
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel}>
+                <DropdownMenuItem onClick={handleExportExcel} className="font-bold">
                   Export as Excel
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -256,59 +228,61 @@ export function TransactionsTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border overflow-x-auto">
+          <div className="rounded-xl border overflow-x-auto shadow-sm">
             <Table className="min-w-[700px]">
-              <TableHeader>
+              <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Guest Full Name</TableHead>
-                  <TableHead>Village / Mobile</TableHead>
-                  <TableHead>Status / Receipt</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
+                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Event</TableHead>
+                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Guest Details</TableHead>
+                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Village / Mobile</TableHead>
+                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Method</TableHead>
+                  <TableHead className="text-right font-black uppercase tracking-widest text-[10px]">Amount</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedTransactions.length > 0 ? (
                   paginatedTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="font-medium max-w-[150px] truncate">
+                    <TableRow key={transaction.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-bold truncate max-w-[150px]">
                         {transaction.eventName}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="font-medium truncate max-w-[120px]">{transaction.name}</span>
+                          <div className="bg-primary/10 p-1.5 rounded-full text-primary shrink-0">
+                            <User className="h-3 w-3" />
+                          </div>
+                          <span className="font-bold truncate max-w-[120px]">{transaction.name}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-[10px] md:text-xs">
+                          <div className="flex items-center gap-2 text-[10px] md:text-xs font-medium">
                             <Home className="h-3 w-3 text-muted-foreground shrink-0" />
                             <span className="truncate max-w-[100px]">{transaction.village || 'N/A'}</span>
                           </div>
-                          {transaction.mobile && transaction.mobile !== 'N/A' && (
+                          {transaction.mobile && (
                             <div className="flex items-center gap-2 text-[10px] md:text-xs text-muted-foreground">
                               <Phone className="h-3 w-3 shrink-0" />
-                              <span>{transaction.mobile}</span>
+                              <span className="font-mono">{transaction.mobile}</span>
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <Badge variant="default" className="w-fit text-[9px] h-4">
-                            {transaction.status}
+                          <Badge variant="outline" className="w-fit text-[9px] h-4 uppercase font-black tracking-widest">
+                            {transaction.paymentMethod || 'UPI'}
                           </Badge>
                           {transaction.receiptStatus === 'Sent' && (
-                             <div className="flex items-center gap-1 text-[9px] text-green-600 font-bold">
+                             <div className="flex items-center gap-1 text-[9px] text-success-green font-bold uppercase">
                                <MessageCircle className="h-3 w-3" />
                                WA Sent
                              </div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="text-right font-black text-primary">
                         {formatCurrency(transaction.amount)}
                       </TableCell>
                       <TableCell>
@@ -316,35 +290,11 @@ export function TransactionsTable() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-primary"
+                            className="h-8 w-8 text-primary hover:bg-primary/10"
                             onClick={() => handleViewReceipt(transaction)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Record?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete the payment record for {transaction.name}?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeleteTransaction(transaction.id, transaction.eventId)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -353,26 +303,34 @@ export function TransactionsTable() {
                   <TableRow>
                     <TableCell
                       colSpan={6}
-                      className="h-24 text-center text-muted-foreground"
+                      className="h-48 text-center text-muted-foreground uppercase font-bold text-xs"
                     >
-                      No payments found.
+                      No verified payments in ledger.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-            <div className="text-xs text-muted-foreground">
-              Showing {transactions.length > 0 ? start + 1 : 0} to{' '}
-              {Math.min(end, transactions.length)} of {transactions.length} recorded payments.
+          <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl mt-6 flex items-start gap-3">
+             <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+             <div className="space-y-1">
+                <p className="text-xs font-black text-amber-800 uppercase tracking-widest">Hard Rule: Immutable Ledger</p>
+                <p className="text-[10px] text-amber-700 font-medium">
+                  To prevent fraud, transactions cannot be edited or deleted. If a mistake was made, please record a reversal entry or contact support for administrative correction.
+                </p>
+             </div>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6">
+            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+              Record {transactions.length > 0 ? start + 1 : 0} - {Math.min(end, transactions.length)} of {transactions.length}
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
               <Button
                 asChild
                 variant="outline"
                 size="sm"
-                className="flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none font-bold uppercase text-[10px] tracking-widest h-8"
                 disabled={page <= 1}
               >
                 <Link href={`/transactions?page=${page - 1}`}>Previous</Link>
@@ -381,7 +339,7 @@ export function TransactionsTable() {
                 asChild
                 variant="outline"
                 size="sm"
-                className="flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none font-bold uppercase text-[10px] tracking-widest h-8"
                 disabled={page >= totalPages}
               >
                 <Link href={`/transactions?page=${page + 1}`}>Next</Link>
@@ -392,71 +350,67 @@ export function TransactionsTable() {
       </Card>
 
       <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white border-0">
+        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white border-none shadow-2xl rounded-[2rem]">
           <DialogHeader className="sr-only">
             <DialogTitle>Digital Receipt</DialogTitle>
           </DialogHeader>
-          <div className="bg-primary p-6 text-primary-foreground flex flex-col items-center gap-2">
-            <Logo className="h-10 w-10 text-white" />
+          <div className="bg-primary p-8 text-primary-foreground flex flex-col items-center gap-3">
+            <Logo className="h-12 w-12 text-white" />
             <div className="text-center">
-              <h2 className="text-2xl font-bold tracking-tight">Receipt</h2>
-              <p className="text-[10px] opacity-80 uppercase tracking-widest">Transaction Verified</p>
+              <h2 className="text-2xl font-black uppercase tracking-tighter">Verified Receipt</h2>
+              <p className="text-[9px] opacity-70 uppercase font-black tracking-[0.2em]">Transaction Logged Successfully</p>
             </div>
           </div>
           
-          <div className="p-6 md:p-8 space-y-6">
-            <div className="flex justify-between items-center pb-4 border-b">
+          <div className="p-8 space-y-8">
+            <div className="flex justify-between items-start pb-6 border-b border-muted">
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Payer Details</p>
-                <p className="text-sm font-bold truncate max-w-[120px]">{selectedTransaction?.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{selectedTransaction?.village}</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Guest Details</p>
+                <p className="text-base font-black text-foreground truncate max-w-[140px]">{selectedTransaction?.name}</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase truncate max-w-[140px]">{selectedTransaction?.village}</p>
               </div>
               <div className="text-right space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Amount Paid</p>
-                <p className="text-xl font-black text-primary">{formatCurrency(selectedTransaction?.amount || 0)}</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Amount Paid</p>
+                <p className="text-2xl font-black text-primary">{formatCurrency(selectedTransaction?.amount || 0)}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-y-6 gap-x-4">
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Event</p>
-                <p className="text-[11px] font-semibold truncate">{selectedTransaction?.eventName}</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Event Name</p>
+                <p className="text-xs font-bold truncate">{selectedTransaction?.eventName}</p>
               </div>
               <div className="space-y-1 text-right">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Date</p>
-                <p className="text-[11px] font-semibold">{selectedTransaction?.date.toLocaleDateString()}</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Date Recorded</p>
+                <p className="text-xs font-bold">{selectedTransaction?.date.toLocaleDateString()}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Receipt ID</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Receipt ID</p>
                 <p className="text-[10px] font-mono font-bold text-primary">{selectedTransaction?.receiptId}</p>
               </div>
               <div className="space-y-1 text-right">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Method</p>
-                <p className="text-[11px] font-semibold">{selectedTransaction?.paymentMethod || 'UPI'}</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Method</p>
+                <p className="text-xs font-bold uppercase">{selectedTransaction?.paymentMethod || 'UPI'}</p>
               </div>
             </div>
 
-            <div className="bg-primary/5 p-3 rounded-xl border border-primary/10 flex items-center gap-3">
-              <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+            <div className="bg-success-green/5 p-4 rounded-xl border border-success-green/10 flex items-center gap-3">
+              <CheckCircle2 className="h-4 w-4 text-success-green shrink-0" />
               <div className="flex-1">
-                <p className="text-[11px] font-bold text-primary">WhatsApp Acknowledgment</p>
-                <p className="text-[9px] text-muted-foreground">Receipt {selectedTransaction?.receiptStatus === 'Sent' ? 'delivered to' : 'pending for'} +91 {selectedTransaction?.mobile}</p>
+                <p className="text-[10px] font-black text-success-green uppercase tracking-widest">Digital Acknowledgment</p>
+                <p className="text-[9px] text-muted-foreground font-medium">Receipt {selectedTransaction?.receiptStatus === 'Sent' ? 'delivered to' : 'pending for'} {selectedTransaction?.mobile}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2">
-               <Button variant="outline" className="w-full h-9 text-xs font-bold" onClick={() => setIsReceiptOpen(false)}>
-                 Close
-               </Button>
-               <Button className="w-full h-9 text-xs font-bold gap-2">
-                 <Download className="h-3 w-3" />
-                 PDF
+            <div className="grid grid-cols-1 pt-2">
+               <Button className="w-full h-12 font-black uppercase tracking-widest text-xs bg-[#1A237E] hover:bg-[#1A237E]/90" onClick={() => setIsReceiptOpen(false)}>
+                 Close Receipt
                </Button>
             </div>
           </div>
           
           <div className="bg-muted/30 p-4 text-center">
-            <p className="text-[8px] text-muted-foreground">Digital record secured by ChanloPay.</p>
+            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Verified Digital Record Secured by ChanloPay</p>
           </div>
         </DialogContent>
       </Dialog>
