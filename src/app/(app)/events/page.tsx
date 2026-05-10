@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Event, Host } from '@/lib/types';
-import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp, Wallet2, CheckCircle2, PlayCircle, StopCircle, QrCode, Download, Maximize2, X } from 'lucide-react';
+import { Calendar, MapPin, Loader2, Trash2, Plus, Share2, TrendingUp, Wallet2, CheckCircle2, PlayCircle, StopCircle, QrCode, Download, Maximize2, X, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -345,7 +345,23 @@ export default function EventsPage() {
                         </DialogContent>
                     </Dialog>
                     
-                    <Button variant="outline" size="icon" className="h-10 w-10 text-primary" title="View QR" onClick={() => setSelectedEventForQr(event)}>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-10 w-10 text-primary" 
+                      title="View QR" 
+                      onClick={() => {
+                        if (!hostProfile?.upi) {
+                          toast({
+                            variant: 'destructive',
+                            title: 'UPI ID Missing',
+                            description: 'Please add your UPI ID in Settings to generate a payment QR code.',
+                          });
+                          return;
+                        }
+                        setSelectedEventForQr(event);
+                      }}
+                    >
                       <QrCode className="h-5 w-5" />
                     </Button>
 
@@ -400,31 +416,39 @@ export default function EventsPage() {
                 </div>
                 
                 <div className="p-8 flex flex-col items-center gap-6 w-full">
-                  <div className="bg-white p-4 rounded-3xl shadow-xl border-4 border-primary/10 relative group">
-                    {getUpiQrUrl(selectedEventForQr) && (
-                      <img 
-                        src={getUpiQrUrl(selectedEventForQr)!} 
-                        alt="UPI QR Code" 
-                        className="w-64 h-64 md:w-80 md:h-80 object-contain"
-                      />
+                  <div className="bg-white p-4 rounded-3xl shadow-xl border-4 border-primary/10 relative group min-h-[256px] flex items-center justify-center">
+                    {getUpiQrUrl(selectedEventForQr) ? (
+                      <>
+                        <img 
+                          src={getUpiQrUrl(selectedEventForQr)!} 
+                          alt="UPI QR Code" 
+                          className="w-64 h-64 md:w-80 md:h-80 object-contain"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl">
+                           <Button size="lg" variant="secondary" onClick={() => setIsQrFullScreen(true)}>
+                             <Maximize2 className="mr-2 h-5 w-5" />
+                             Full Screen
+                           </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-destructive font-bold p-4 text-center">
+                        <AlertCircle className="h-10 w-10" />
+                        <p>UPI ID Required</p>
+                        <p className="text-[10px] text-muted-foreground font-normal">Add your UPI ID in Settings to see the QR code.</p>
+                      </div>
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl">
-                       <Button size="lg" variant="secondary" onClick={() => setIsQrFullScreen(true)}>
-                         <Maximize2 className="mr-2 h-5 w-5" />
-                         Full Screen
-                       </Button>
-                    </div>
                   </div>
 
                   <div className="w-full grid grid-cols-2 gap-3">
-                    <Button className="w-full font-bold" onClick={() => {
+                    <Button className="w-full font-bold" disabled={!hostProfile?.upi} onClick={() => {
                        navigator.clipboard.writeText(`${origin}/p/${user?.uid}/${selectedEventForQr.id}`);
                        toast({ title: "Link Copied" });
                     }}>
                       <Share2 className="mr-2 h-4 w-4" />
                       Share Link
                     </Button>
-                    <Button variant="outline" className="w-full font-bold" onClick={() => window.print()}>
+                    <Button variant="outline" className="w-full font-bold" disabled={!hostProfile?.upi} onClick={() => window.print()}>
                       <Download className="mr-2 h-4 w-4" />
                       Print QR
                     </Button>
