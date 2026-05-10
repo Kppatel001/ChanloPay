@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, Sparkles, AlertCircle, ExternalLink, Copy, Check, QrCode, Maximize2, Wallet, X } from 'lucide-react';
+import { Loader2, CheckCircle2, User, Home, Phone, Languages, ShieldCheck, Sparkles, Wallet, X, ArrowRight, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 
 const QUICK_AMOUNTS = [101, 501, 1001, 2101, 5001];
 
-type FlowStep = 'payment' | 'confirmation' | 'identity' | 'success';
+type FlowStep = 'details' | 'confirm' | 'success';
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
   const resolvedParams = use(params);
@@ -26,18 +26,17 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const { toast } = useToast();
 
   // Flow State
-  const [step, setStep] = useState<FlowStep>('payment');
+  const [step, setStep] = useState<FlowStep>('details');
   
-  // Payment State
-  const [amount, setAmount] = useState('501');
-  const [language, setLanguage] = useState<'en' | 'gu' | 'hi'>('en');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isQrFullScreen, setIsQrFullScreen] = useState(false);
-
-  // Identity State (Collected post-payment)
+  // Guest Details
   const [guestName, setGuestName] = useState('');
   const [villageName, setVillageName] = useState('');
   const [mobile, setMobile] = useState('');
+  const [amount, setAmount] = useState('501');
+  const [language, setLanguage] = useState<'en' | 'gu' | 'hi'>('en');
+  
+  // Processing State
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptId, setReceiptId] = useState<string | null>(null);
 
   const hostRef = useMemoFirebase(() => {
@@ -51,38 +50,29 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const { data: hostProfile, isLoading: hostLoading } = useDoc<Host>(hostRef);
   const { data: eventData, isLoading: eventLoading } = useDoc<Event>(eventRef);
 
-  const handlePayNow = async () => {
-    if (!amount || !eventData || !hostProfile?.upi) {
-      toast({ variant: 'destructive', title: 'Payment Error', description: 'Please select an amount.' });
+  const handleContinueToPay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestName.trim() || !amount || parseFloat(amount) <= 0) {
+      toast({ variant: 'destructive', title: 'Missing Details', description: 'Please enter your name and shagun amount.' });
       return;
     }
 
-    if (eventData.status === 'Completed') {
-      toast({ variant: 'destructive', title: 'Event Closed', description: 'This event is no longer accepting payments.' });
+    if (!hostProfile?.upi) {
+      toast({ variant: 'destructive', title: 'Setup Incomplete', description: 'The host has not set up their UPI ID yet.' });
       return;
     }
 
-    // Construct deep link URI
-    const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Event Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
+    // Construct UPI Deep Link
+    const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Event Host')}&tn=${encodeURIComponent(eventData?.eventName || 'Shagun')}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
 
-    // Trigger UPI App
+    // Attempt to open UPI App
     window.location.href = upiUri;
     
     // Move to confirmation step
-    setStep('confirmation');
+    setStep('confirm');
   };
 
-  const handleConfirmSuccess = () => {
-    setStep('identity');
-  };
-
-  const handleSubmitIdentity = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!guestName.trim()) {
-      toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter your name for the record.' });
-      return;
-    }
-
+  const handleFinalizeRecord = async () => {
     setIsSubmitting(true);
     try {
       const transactionData = {
@@ -94,13 +84,13 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         amount: parseFloat(amount),
         paymentMethod: 'UPI' as const,
         type: 'Gift' as const,
-        language: language
+        language: language,
       };
 
       // 1. Secure handshake
       const order = await initiateSecureGuestPayment(transactionData);
       
-      // 2. Finalize and log
+      // 2. Finalize and log in DB
       const result = await finalizeGuestPayment(
         order.orderId,
         order.integrityHash,
@@ -110,18 +100,12 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
       setReceiptId(result.receiptId);
       setStep('success');
-      toast({ title: "Gift Recorded", description: "The host has been notified." });
+      toast({ title: "Gift Recorded", description: "Your payment has been logged successfully." });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Error', description: err.message });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const getUpiQrUrl = () => {
-    if (!hostProfile?.upi || !eventData) return null;
-    const upiIntent = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount || '0').toFixed(2)}&cu=INR`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(upiIntent)}`;
   };
 
   if (hostLoading || eventLoading) {
@@ -148,205 +132,190 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     <div className="min-h-screen bg-[#FFF8E7] p-4 md:p-8 flex flex-col items-center">
       <div className="w-full max-w-md">
         
-        {/* Step: Payment (The "Simple UI") */}
-        {step === 'payment' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="text-center space-y-1">
-              <Logo className="h-10 w-10 text-[#7B1E2B] mx-auto mb-2" />
-              <h2 className="font-headline text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter">{eventData.eventName}</h2>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Hosted by {hostProfile.name}</p>
-            </div>
+        {/* Header Section */}
+        <div className="text-center space-y-1 mb-6">
+          <Logo className="h-10 w-10 text-[#7B1E2B] mx-auto mb-2" />
+          <h2 className="font-headline text-2xl md:text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter">
+            {eventData.eventName}
+          </h2>
+          <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            Host: {hostProfile.name}
+          </p>
+        </div>
 
-            <Card className="w-full shadow-2xl border-none overflow-hidden bg-white rounded-[2rem]">
-              <div className="p-8 flex flex-col items-center gap-6">
-                
-                {/* BIG QR SECTION */}
-                <div 
-                  className="bg-white p-4 rounded-3xl shadow-xl border-4 border-[#7B1E2B]/5 relative group cursor-pointer overflow-hidden transition-transform active:scale-95"
-                  onClick={() => setIsQrFullScreen(true)}
-                >
-                  {getUpiQrUrl() && (
-                    <img src={getUpiQrUrl()!} alt="Payment QR" className="w-64 h-64 md:w-72 md:h-72 object-contain" />
-                  )}
-                  <div className="absolute inset-0 bg-white/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Maximize2 className="h-10 w-10 text-[#7B1E2B]" />
+        {/* STEP 1: Details Entry */}
+        {step === 'details' && (
+          <Card className="w-full shadow-2xl border-none rounded-[2rem] overflow-hidden bg-white animate-in slide-in-from-bottom-4 duration-500">
+            <CardHeader className="pb-2 text-center">
+               <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-2 text-primary">
+                 <Sparkles className="h-6 w-6" />
+               </div>
+               <CardTitle className="text-xl font-black text-[#7B1E2B] uppercase tracking-tighter">Guest Information</CardTitle>
+               <CardDescription className="text-xs font-bold">Provide details before proceeding to pay.</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleContinueToPay}>
+              <CardContent className="space-y-5 py-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
+                    <Input 
+                      placeholder="Your Full Name" 
+                      className="h-14 pl-12 text-base font-bold bg-muted/20 border-none rounded-2xl" 
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
 
-                <div className="text-center">
-                   <p className="text-sm font-black text-[#7B1E2B]">Scan & Pay with Any UPI App</p>
-                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 mt-1">GPay • PhonePe • Paytm • BHIM</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Village / City</Label>
+                    <div className="relative">
+                      <Home className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
+                      <Input 
+                        placeholder="Location" 
+                        className="h-14 pl-12 text-base font-bold bg-muted/20 border-none rounded-2xl" 
+                        value={villageName}
+                        onChange={(e) => setVillageName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mobile (WA)</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
+                      <Input 
+                        placeholder="Mobile" 
+                        className="h-14 pl-12 text-base font-bold bg-muted/20 border-none rounded-2xl" 
+                        value={mobile}
+                        onChange={(e) => setMobile(e.target.value)}
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* QUICK AMOUNTS */}
-                <div className="w-full space-y-4">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Shagun Amount (₹)</Label>
                   <div className="grid grid-cols-3 gap-2">
                     {QUICK_AMOUNTS.slice(0, 3).map((q) => (
                       <Button 
                         key={q} 
+                        type="button"
                         variant={amount === q.toString() ? 'default' : 'outline'} 
-                        className={cn("h-12 font-black text-lg rounded-xl", amount === q.toString() ? "bg-[#D4AF37] text-white border-none shadow-lg" : "border-[#D4AF37]/20 text-[#7B1E2B]")}
+                        className={cn("h-12 font-black rounded-xl text-lg", amount === q.toString() ? "bg-[#D4AF37] text-white border-none shadow-lg" : "border-[#D4AF37]/20 text-[#7B1E2B]")}
                         onClick={() => setAmount(q.toString())}
                       >
                         ₹{q}
                       </Button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-[#7B1E2B]">₹</span>
-                        <Input 
-                          placeholder="Other" 
-                          type="number" 
-                          className="pl-7 h-12 font-black bg-muted/20 border-none rounded-xl text-base" 
-                          value={amount} 
-                          onChange={(e) => setAmount(e.target.value)} 
-                        />
-                     </div>
-                     <Select value={language} onValueChange={(v: any) => setLanguage(v)}>
-                        <SelectTrigger className="h-12 font-bold border-none bg-muted/20 rounded-xl">
-                           <Languages className="mr-2 h-4 w-4 text-[#7B1E2B]" />
-                           <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="en">English</SelectItem>
-                           <SelectItem value="gu">ગુજરાતી</SelectItem>
-                           <SelectItem value="hi">हिन्दी</SelectItem>
-                        </SelectContent>
-                     </Select>
-                  </div>
-                </div>
-
-                <Button 
-                  className="w-full h-16 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-2xl shadow-blue-900/30 rounded-2xl group" 
-                  onClick={handlePayNow}
-                  disabled={!amount || parseFloat(amount) <= 0}
-                >
-                  <Wallet className="h-6 w-6 mr-2 group-hover:scale-110 transition-transform" />
-                  PAY NOW
-                </Button>
-              </div>
-            </Card>
-
-            <div className="text-center opacity-40">
-              <p className="text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                <ShieldCheck className="h-3 w-3" />
-                Secure Digital Ledger Portal
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Confirmation */}
-        {step === 'confirmation' && (
-          <Card className="w-full shadow-2xl border-none p-8 text-center animate-in zoom-in duration-300 rounded-[2rem]">
-            <div className="mx-auto bg-amber-100 text-amber-600 p-4 rounded-full w-fit mb-6">
-              <Wallet className="h-12 w-12" />
-            </div>
-            <CardTitle className="text-2xl font-black text-[#7B1E2B] uppercase mb-2">Payment Sent?</CardTitle>
-            <p className="text-sm font-medium text-muted-foreground mb-8">
-              Did you complete the payment in your UPI app?
-            </p>
-            <div className="space-y-3">
-              <Button className="w-full h-14 text-lg font-black bg-success-green hover:bg-success-green/90 text-white rounded-xl" onClick={handleConfirmSuccess}>
-                YES, I PAID ₹{amount}
-              </Button>
-              <Button variant="outline" className="w-full h-12 font-bold text-muted-foreground border-none hover:bg-muted" onClick={() => setStep('payment')}>
-                NO, GO BACK
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Step: Identity (Who are you?) */}
-        {step === 'identity' && (
-          <Card className="w-full shadow-2xl border-none animate-in slide-in-from-bottom-4 duration-500 rounded-[2rem]">
-            <CardHeader className="text-center">
-              <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-2 text-primary">
-                <Sparkles className="h-6 w-6" />
-              </div>
-              <CardTitle className="font-headline text-2xl text-[#7B1E2B]">Thank You!</CardTitle>
-              <CardDescription className="font-bold">Please provide your details for the Host's records.</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmitIdentity}>
-              <CardContent className="space-y-4 pt-4">
-                <div className="grid gap-2">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Full Name (Required)</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
-                    <Input placeholder="Guest Name" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold rounded-xl" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Village / City</Label>
-                  <div className="relative">
-                    <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
-                    <Input placeholder="Your Home Town" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold rounded-xl" value={villageName} onChange={(e) => setVillageName(e.target.value)} />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Mobile (For Receipt)</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
-                    <Input placeholder="10-digit mobile" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold rounded-xl" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={10} />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#7B1E2B] text-lg">₹</span>
+                      <Input 
+                        placeholder="Custom" 
+                        type="number" 
+                        className="h-14 pl-8 text-lg font-black bg-muted/20 border-none rounded-2xl" 
+                        value={amount} 
+                        onChange={(e) => setAmount(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Select value={language} onValueChange={(v: any) => setLanguage(v)}>
+                      <SelectTrigger className="w-[100px] h-14 font-bold border-none bg-muted/20 rounded-2xl">
+                         <Languages className="mr-1 h-4 w-4 text-[#7B1E2B]" />
+                         <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                         <SelectItem value="en">EN</SelectItem>
+                         <SelectItem value="gu">GU</SelectItem>
+                         <SelectItem value="hi">HI</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="pt-2">
-                <Button type="submit" className="w-full h-16 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-2xl shadow-blue-900/20 rounded-2xl" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : 'SUBMIT & GET RECEIPT'}
+                <Button 
+                  type="submit" 
+                  className="w-full h-16 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-2xl shadow-blue-900/20 rounded-2xl group"
+                >
+                  CONTINUE TO PAY
+                  <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </CardFooter>
             </form>
           </Card>
         )}
 
-        {/* Step: Success */}
+        {/* STEP 2: Post-Payment Confirmation */}
+        {step === 'confirm' && (
+          <Card className="w-full shadow-2xl border-none p-8 text-center animate-in zoom-in duration-300 rounded-[2rem] bg-white">
+            <div className="mx-auto bg-amber-100 text-amber-600 p-5 rounded-full w-fit mb-6">
+              <Wallet className="h-12 w-12" />
+            </div>
+            <CardTitle className="text-2xl font-black text-[#7B1E2B] uppercase mb-2">Payment Completed?</CardTitle>
+            <p className="text-sm font-medium text-muted-foreground mb-8">
+              If you have finished the payment in GPay/PhonePe/Paytm, please click below to receive your receipt.
+            </p>
+            <div className="space-y-3">
+              <Button 
+                className="w-full h-16 text-xl font-black bg-success-green hover:bg-success-green/90 text-white rounded-2xl shadow-xl" 
+                onClick={handleFinalizeRecord}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : 'YES, RECORD MY GIFT'}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full h-12 font-bold text-muted-foreground border-none hover:bg-muted" 
+                onClick={() => setStep('details')}
+              >
+                NO, GO BACK
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* STEP 3: Success Receipt */}
         {step === 'success' && (
-          <Card className="w-full shadow-2xl border-none animate-in fade-in zoom-in duration-300 overflow-hidden rounded-[2rem]">
+          <Card className="w-full shadow-2xl border-none animate-in fade-in zoom-in duration-300 overflow-hidden rounded-[2rem] bg-white">
             <div className="bg-success-green/10 p-8 text-center border-b border-success-green/20">
               <div className="mx-auto bg-success-green text-white p-4 rounded-full w-fit mb-4 shadow-lg">
-                <CheckCircle2 className="h-10 w-10" />
+                <Check className="h-10 w-10" />
               </div>
-              <CardTitle className="font-headline text-3xl text-success-green">Success!</CardTitle>
+              <CardTitle className="font-headline text-3xl text-success-green uppercase tracking-tighter">Dhanyavad!</CardTitle>
               <p className="text-sm font-bold text-muted-foreground mt-2">
-                Your gift of ₹{amount} has been securely logged.
+                Your gift of ₹{amount} has been securely recorded for the host.
               </p>
             </div>
             <CardContent className="p-8 space-y-6">
                <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex items-center gap-3">
                  <ShieldCheck className="h-6 w-6 text-primary shrink-0" />
-                 <p className="text-xs font-bold leading-tight">Receipt ID: <span className="font-mono text-primary">{receiptId}</span>. A copy will be sent to your mobile via WhatsApp if provided.</p>
+                 <div className="flex-1">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">Receipt ID</p>
+                    <p className="text-sm font-mono font-bold text-primary">{receiptId}</p>
+                 </div>
                </div>
-               <Button className="w-full h-14 text-lg font-bold bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-xl rounded-xl" onClick={() => window.location.reload()}>
-                 Make Another Entry
+               <div className="text-center">
+                  <p className="text-xs text-muted-foreground font-medium">A digital receipt has been triggered via WhatsApp.</p>
+               </div>
+               <Button className="w-full h-14 text-lg font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-xl rounded-2xl" onClick={() => window.location.reload()}>
+                 ANOTHER ENTRY
                </Button>
             </CardContent>
+            <CardFooter className="justify-center pb-6">
+               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                 <ShieldCheck className="h-3 w-3" />
+                 SECURE DIGITAL LEDGER
+               </p>
+            </CardFooter>
           </Card>
         )}
       </div>
-
-      {/* Full Screen QR Modal */}
-      {isQrFullScreen && (
-        <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-8 animate-in fade-in duration-300">
-           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full" onClick={() => setIsQrFullScreen(false)}>
-             <X className="h-10 w-10 text-[#7B1E2B]" />
-           </Button>
-           <div className="text-center mb-8">
-            <h2 className="text-4xl font-black text-[#7B1E2B] uppercase mb-2">{eventData.eventName}</h2>
-            <p className="text-xl font-bold text-muted-foreground uppercase tracking-widest">Scan to Pay Shagun</p>
-           </div>
-           <div className="bg-white p-6 rounded-[3rem] shadow-2xl border-8 border-[#7B1E2B]/5">
-              {getUpiQrUrl() && (
-                <img src={getUpiQrUrl()!} alt="Full Screen QR" className="w-[80vw] h-[80vw] max-w-[500px] max-h-[500px]" />
-              )}
-           </div>
-           <div className="mt-12 text-center">
-              <p className="text-2xl font-black text-[#7B1E2B] uppercase tracking-tighter">Secure Event Portal</p>
-              <p className="text-sm font-bold text-muted-foreground mt-2">Open GPay, PhonePe, or Paytm to Scan</p>
-           </div>
-        </div>
-      )}
     </div>
   );
 }
