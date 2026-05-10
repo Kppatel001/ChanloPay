@@ -9,32 +9,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, Sparkles, AlertCircle, ExternalLink, Copy, Check, QrCode, Maximize2, Wallet } from 'lucide-react';
+import { Loader2, CheckCircle2, User, Home, ArrowLeft, ChevronRight, ShieldAlert, Phone, Languages, ShieldCheck, Sparkles, AlertCircle, ExternalLink, Copy, Check, QrCode, Maximize2, Wallet, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { initiateSecureGuestPayment, finalizeGuestPayment } from '@/app/actions/api';
 import { cn } from '@/lib/utils';
 
 const QUICK_AMOUNTS = [101, 501, 1001, 2101, 5001];
+
+type FlowStep = 'payment' | 'confirmation' | 'identity' | 'success';
 
 export default function GuestPaymentPage({ params }: { params: Promise<{ hostId: string; eventId: string }> }) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  // Flow State
+  const [step, setStep] = useState<FlowStep>('payment');
+  
+  // Payment State
+  const [amount, setAmount] = useState('501');
+  const [language, setLanguage] = useState<'en' | 'gu' | 'hi'>('en');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isQrFullScreen, setIsQrFullScreen] = useState(false);
+
+  // Identity State (Collected post-payment)
   const [guestName, setGuestName] = useState('');
   const [villageName, setVillageName] = useState('');
   const [mobile, setMobile] = useState('');
-  const [amount, setAmount] = useState('');
-  const [language, setLanguage] = useState<'en' | 'gu' | 'hi'>('en');
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [isFinalized, setIsFinalized] = useState(false);
   const [receiptId, setReceiptId] = useState<string | null>(null);
-  const [isQrFullScreen, setIsQrFullScreen] = useState(false);
 
   const hostRef = useMemoFirebase(() => {
     return doc(firestore, `hosts/${resolvedParams.hostId}`);
@@ -47,24 +51,9 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
   const { data: hostProfile, isLoading: hostLoading } = useDoc<Host>(hostRef);
   const { data: eventData, isLoading: eventLoading } = useDoc<Event>(eventRef);
 
-  const handleNext = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (eventData?.status === 'Completed') return;
-
-    if (!guestName.trim()) {
-      toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter your full name.' });
-      return;
-    }
-    if (!villageName.trim()) {
-      toast({ variant: 'destructive', title: 'Village Required', description: 'Please enter your village name.' });
-      return;
-    }
-    setHasSubmitted(true);
-  };
-
-  const handleOpenUpiApp = async () => {
-    if (!guestName || !villageName || !amount || !eventData || !hostProfile?.upi) {
-      toast({ variant: 'destructive', title: 'Payment Error', description: 'Incomplete payment information.' });
+  const handlePayNow = async () => {
+    if (!amount || !eventData || !hostProfile?.upi) {
+      toast({ variant: 'destructive', title: 'Payment Error', description: 'Please select an amount.' });
       return;
     }
 
@@ -73,14 +62,34 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       return;
     }
 
-    setIsSubmitting(true);
+    // Construct deep link URI
+    const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Event Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
 
+    // Trigger UPI App
+    window.location.href = upiUri;
+    
+    // Move to confirmation step
+    setStep('confirmation');
+  };
+
+  const handleConfirmSuccess = () => {
+    setStep('identity');
+  };
+
+  const handleSubmitIdentity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestName.trim()) {
+      toast({ variant: 'destructive', title: 'Name Required', description: 'Please enter your name for the record.' });
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const transactionData = {
         hostId: resolvedParams.hostId,
         eventId: resolvedParams.eventId,
         name: guestName.trim(),
-        village: villageName.trim(),
+        village: villageName.trim() || 'N/A',
         mobile: mobile,
         amount: parseFloat(amount),
         paymentMethod: 'UPI' as const,
@@ -88,34 +97,22 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
         language: language
       };
 
-      // 1. Secure handshake with firewall
+      // 1. Secure handshake
       const order = await initiateSecureGuestPayment(transactionData);
       
-      // 2. Log transaction in the digital ledger
+      // 2. Finalize and log
       const result = await finalizeGuestPayment(
         order.orderId,
         order.integrityHash,
         transactionData,
-        eventData.eventName
+        eventData!.eventName
       );
 
-      // 3. Construct deep link URI
-      const upiUri = `upi://pay?pa=${hostProfile.upi}&pn=${encodeURIComponent(hostProfile.name || 'Event Host')}&tn=${encodeURIComponent(eventData.eventName)}&am=${parseFloat(amount).toFixed(2)}&cu=INR`;
-
-      // 4. Trigger UPI App
-      window.location.href = upiUri;
-      
-      // 5. Update local state to show success screen
       setReceiptId(result.receiptId);
-      setIsFinalized(true);
-      
-      toast({ title: "UPI App Triggered", description: "Complete the payment in your app." });
+      setStep('success');
+      toast({ title: "Gift Recorded", description: "The host has been notified." });
     } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Security Alert',
-        description: err.message || 'The secure firewall rejected the request.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: err.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -131,7 +128,7 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-[#FFF8E7] p-4">
         <Loader2 className="h-8 w-8 animate-spin text-[#7B1E2B]" />
-        <p className="mt-2 text-sm text-muted-foreground font-bold">Initializing Secure Portal...</p>
+        <p className="mt-2 text-sm text-muted-foreground font-bold">Opening Secure Portal...</p>
       </div>
     );
   }
@@ -141,126 +138,54 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
       <div className="flex h-screen flex-col items-center justify-center bg-[#FFF8E7] p-4 text-center">
         <Logo className="h-12 w-12 text-[#7B1E2B] mb-4" />
         <h1 className="text-xl font-headline font-bold mb-2">Portal Unavailable</h1>
-        <p className="text-muted-foreground font-body">This link might be invalid or the event has ended.</p>
+        <p className="text-muted-foreground">This event may have ended or the link is invalid.</p>
         <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
   }
 
-  const isCompleted = eventData.status === 'Completed';
-
   return (
     <div className="min-h-screen bg-[#FFF8E7] p-4 md:p-8 flex flex-col items-center">
       <div className="w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center gap-1 text-center">
-          <Logo className="h-12 w-12 text-[#7B1E2B]" />
-          <h1 className="font-headline text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter">ChanloPay</h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Verified Wedding Ledger</p>
-        </div>
-
-        {isCompleted && !isFinalized ? (
-          <Card className="w-full shadow-2xl border-none">
-            <CardHeader className="text-center">
-              <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-              <CardTitle className="font-headline text-2xl text-destructive">Collection Closed</CardTitle>
-              <CardDescription>
-                <strong>{eventData.eventName}</strong> is no longer accepting digital payments.
-              </CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button variant="outline" className="w-full h-12 font-bold" onClick={() => window.history.back()}>Go Back</Button>
-            </CardFooter>
-          </Card>
-        ) : isFinalized ? (
-          <Card className="w-full shadow-2xl border-none animate-in fade-in zoom-in duration-300 overflow-hidden">
-            <div className="bg-success-green/10 p-6 text-center border-b border-success-green/20">
-              <div className="mx-auto bg-success-green text-white p-3 rounded-full w-fit mb-2 shadow-lg">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
-              <CardTitle className="font-headline text-2xl text-success-green">Payment Recorded!</CardTitle>
-              <p className="text-sm font-bold text-muted-foreground">Digital Receipt ID: <span className="font-mono text-primary">{receiptId}</span></p>
-            </div>
-            <CardContent className="p-8 space-y-6">
-               <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex items-center gap-3">
-                 <ShieldCheck className="h-6 w-6 text-primary shrink-0" />
-                 <p className="text-xs font-bold leading-tight">Thank you for your gift! Your entry has been securely logged in the event ledger.</p>
-               </div>
-               <Button className="w-full h-14 text-lg font-bold bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-xl shadow-blue-900/10" onClick={() => window.location.reload()}>
-                 Make Another Entry
-               </Button>
-            </CardContent>
-          </Card>
-        ) : !hasSubmitted ? (
-          <Card className="w-full shadow-2xl border-none">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="font-headline text-2xl text-[#7B1E2B]">{eventData.eventName}</CardTitle>
-              <CardDescription className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Hosted by {hostProfile.name}</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleNext}>
-              <CardContent className="space-y-4 pt-4">
-                <div className="grid gap-2">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Your Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
-                    <Input placeholder="Enter your name" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Village Name</Label>
-                  <div className="relative">
-                    <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
-                    <Input placeholder="Enter your village" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold" value={villageName} onChange={(e) => setVillageName(e.target.value)} required />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Mobile Number (Optional)</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
-                    <Input placeholder="10-digit number for receipt" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={10} />
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-2">
-                <Button type="submit" className="w-full h-16 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white group shadow-2xl shadow-blue-900/20">
-                  CONTINUE TO PAY
-                  <ChevronRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        ) : (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        
+        {/* Step: Payment (The "Simple UI") */}
+        {step === 'payment' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
             <div className="text-center space-y-1">
-              <h2 className="font-headline text-3xl font-black text-[#7B1E2B] uppercase tracking-tight">{eventData.eventName}</h2>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Secure Payment Gateway</p>
+              <Logo className="h-10 w-10 text-[#7B1E2B] mx-auto mb-2" />
+              <h2 className="font-headline text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter">{eventData.eventName}</h2>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Hosted by {hostProfile.name}</p>
             </div>
 
-            <Card className="w-full shadow-2xl border-none overflow-hidden bg-white">
+            <Card className="w-full shadow-2xl border-none overflow-hidden bg-white rounded-[2rem]">
               <div className="p-8 flex flex-col items-center gap-6">
+                
+                {/* BIG QR SECTION */}
                 <div 
-                  className="bg-white p-4 rounded-3xl shadow-xl border-4 border-[#7B1E2B]/5 relative group cursor-pointer overflow-hidden"
+                  className="bg-white p-4 rounded-3xl shadow-xl border-4 border-[#7B1E2B]/5 relative group cursor-pointer overflow-hidden transition-transform active:scale-95"
                   onClick={() => setIsQrFullScreen(true)}
                 >
                   {getUpiQrUrl() && (
                     <img src={getUpiQrUrl()!} alt="Payment QR" className="w-64 h-64 md:w-72 md:h-72 object-contain" />
                   )}
-                  <div className="absolute inset-0 bg-white/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl">
+                  <div className="absolute inset-0 bg-white/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Maximize2 className="h-10 w-10 text-[#7B1E2B]" />
                   </div>
                 </div>
 
-                <div className="text-center space-y-1">
+                <div className="text-center">
                    <p className="text-sm font-black text-[#7B1E2B]">Scan & Pay with Any UPI App</p>
-                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">GPay • PhonePe • Paytm • BHIM</p>
+                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 mt-1">GPay • PhonePe • Paytm • BHIM</p>
                 </div>
 
+                {/* QUICK AMOUNTS */}
                 <div className="w-full space-y-4">
                   <div className="grid grid-cols-3 gap-2">
                     {QUICK_AMOUNTS.slice(0, 3).map((q) => (
                       <Button 
                         key={q} 
                         variant={amount === q.toString() ? 'default' : 'outline'} 
-                        className={cn("h-12 font-black text-lg", amount === q.toString() ? "bg-[#D4AF37] text-white border-none shadow-lg" : "border-[#D4AF37]/20 text-[#7B1E2B]")}
+                        className={cn("h-12 font-black text-lg rounded-xl", amount === q.toString() ? "bg-[#D4AF37] text-white border-none shadow-lg" : "border-[#D4AF37]/20 text-[#7B1E2B]")}
                         onClick={() => setAmount(q.toString())}
                       >
                         ₹{q}
@@ -271,15 +196,15 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                      <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-[#7B1E2B]">₹</span>
                         <Input 
-                          placeholder="Amount" 
+                          placeholder="Other" 
                           type="number" 
-                          className="pl-7 h-12 font-black bg-muted/20 border-none text-base" 
+                          className="pl-7 h-12 font-black bg-muted/20 border-none rounded-xl text-base" 
                           value={amount} 
                           onChange={(e) => setAmount(e.target.value)} 
                         />
                      </div>
                      <Select value={language} onValueChange={(v: any) => setLanguage(v)}>
-                        <SelectTrigger className="h-12 font-bold border-none bg-muted/20">
+                        <SelectTrigger className="h-12 font-bold border-none bg-muted/20 rounded-xl">
                            <Languages className="mr-2 h-4 w-4 text-[#7B1E2B]" />
                            <SelectValue />
                         </SelectTrigger>
@@ -292,27 +217,120 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                   </div>
                 </div>
 
-                <Button className="w-full h-16 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-2xl shadow-blue-900/30 group" onClick={handleOpenUpiApp} disabled={isSubmitting || !amount}>
-                  {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin mr-2" /> : <Wallet className="h-6 w-6 mr-2 group-hover:scale-110 transition-transform" />}
+                <Button 
+                  className="w-full h-16 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-2xl shadow-blue-900/30 rounded-2xl group" 
+                  onClick={handlePayNow}
+                  disabled={!amount || parseFloat(amount) <= 0}
+                >
+                  <Wallet className="h-6 w-6 mr-2 group-hover:scale-110 transition-transform" />
                   PAY NOW
                 </Button>
               </div>
             </Card>
 
-            <div className="text-center">
-              <Button variant="ghost" size="sm" className="text-muted-foreground font-bold hover:bg-white" onClick={() => setHasSubmitted(false)}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Edit Payer Details
-              </Button>
+            <div className="text-center opacity-40">
+              <p className="text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                <ShieldCheck className="h-3 w-3" />
+                Secure Digital Ledger Portal
+              </p>
             </div>
           </div>
         )}
+
+        {/* Step: Confirmation */}
+        {step === 'confirmation' && (
+          <Card className="w-full shadow-2xl border-none p-8 text-center animate-in zoom-in duration-300 rounded-[2rem]">
+            <div className="mx-auto bg-amber-100 text-amber-600 p-4 rounded-full w-fit mb-6">
+              <Wallet className="h-12 w-12" />
+            </div>
+            <CardTitle className="text-2xl font-black text-[#7B1E2B] uppercase mb-2">Payment Sent?</CardTitle>
+            <p className="text-sm font-medium text-muted-foreground mb-8">
+              Did you complete the payment in your UPI app?
+            </p>
+            <div className="space-y-3">
+              <Button className="w-full h-14 text-lg font-black bg-success-green hover:bg-success-green/90 text-white rounded-xl" onClick={handleConfirmSuccess}>
+                YES, I PAID ₹{amount}
+              </Button>
+              <Button variant="outline" className="w-full h-12 font-bold text-muted-foreground border-none hover:bg-muted" onClick={() => setStep('payment')}>
+                NO, GO BACK
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Step: Identity (Who are you?) */}
+        {step === 'identity' && (
+          <Card className="w-full shadow-2xl border-none animate-in slide-in-from-bottom-4 duration-500 rounded-[2rem]">
+            <CardHeader className="text-center">
+              <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-2 text-primary">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <CardTitle className="font-headline text-2xl text-[#7B1E2B]">Thank You!</CardTitle>
+              <CardDescription className="font-bold">Please provide your details for the Host's records.</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmitIdentity}>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid gap-2">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Full Name (Required)</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
+                    <Input placeholder="Guest Name" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold rounded-xl" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Village / City</Label>
+                  <div className="relative">
+                    <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
+                    <Input placeholder="Your Home Town" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold rounded-xl" value={villageName} onChange={(e) => setVillageName(e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Mobile (For Receipt)</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7B1E2B]" />
+                    <Input placeholder="10-digit mobile" className="pl-10 h-14 text-base bg-muted/20 border-none font-bold rounded-xl" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={10} />
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-2">
+                <Button type="submit" className="w-full h-16 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-2xl shadow-blue-900/20 rounded-2xl" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : 'SUBMIT & GET RECEIPT'}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        )}
+
+        {/* Step: Success */}
+        {step === 'success' && (
+          <Card className="w-full shadow-2xl border-none animate-in fade-in zoom-in duration-300 overflow-hidden rounded-[2rem]">
+            <div className="bg-success-green/10 p-8 text-center border-b border-success-green/20">
+              <div className="mx-auto bg-success-green text-white p-4 rounded-full w-fit mb-4 shadow-lg">
+                <CheckCircle2 className="h-10 w-10" />
+              </div>
+              <CardTitle className="font-headline text-3xl text-success-green">Success!</CardTitle>
+              <p className="text-sm font-bold text-muted-foreground mt-2">
+                Your gift of ₹{amount} has been securely logged.
+              </p>
+            </div>
+            <CardContent className="p-8 space-y-6">
+               <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex items-center gap-3">
+                 <ShieldCheck className="h-6 w-6 text-primary shrink-0" />
+                 <p className="text-xs font-bold leading-tight">Receipt ID: <span className="font-mono text-primary">{receiptId}</span>. A copy will be sent to your mobile via WhatsApp if provided.</p>
+               </div>
+               <Button className="w-full h-14 text-lg font-bold bg-[#1A237E] hover:bg-[#1A237E]/90 text-white shadow-xl rounded-xl" onClick={() => window.location.reload()}>
+                 Make Another Entry
+               </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
+      {/* Full Screen QR Modal */}
       {isQrFullScreen && (
         <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-8 animate-in fade-in duration-300">
            <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full" onClick={() => setIsQrFullScreen(false)}>
-             <ArrowLeft className="h-10 w-10 text-[#7B1E2B]" />
+             <X className="h-10 w-10 text-[#7B1E2B]" />
            </Button>
            <div className="text-center mb-8">
             <h2 className="text-4xl font-black text-[#7B1E2B] uppercase mb-2">{eventData.eventName}</h2>
@@ -324,8 +342,8 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
               )}
            </div>
            <div className="mt-12 text-center">
-              <p className="text-2xl font-black text-[#7B1E2B] uppercase tracking-tighter">Verified Secure Portal</p>
-              <p className="text-sm font-bold text-muted-foreground mt-2">Compatible with GPay, PhonePe, and Paytm</p>
+              <p className="text-2xl font-black text-[#7B1E2B] uppercase tracking-tighter">Secure Event Portal</p>
+              <p className="text-sm font-bold text-muted-foreground mt-2">Open GPay, PhonePe, or Paytm to Scan</p>
            </div>
         </div>
       )}
