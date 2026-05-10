@@ -438,7 +438,7 @@ export default function EventsPage() {
                   </div>
 
                   <div className="text-center space-y-1">
-                    <p className="text-sm font-black text-[#7B1E2B]">Scan with Any UPI App</p>
+                    <p className="text-sm font-black text-[#7B1E2B]">Scan with Google</p>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Guests scan to fill name & pay Shagun</p>
                   </div>
 
