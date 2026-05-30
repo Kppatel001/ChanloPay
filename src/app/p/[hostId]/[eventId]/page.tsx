@@ -21,13 +21,15 @@ import {
   ArrowRight, 
   Check, 
   MessageCircle,
-  AlertCircle
+  AlertCircle,
+  QrCode
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, Host } from '@/lib/types';
 import { Logo } from '@/components/icons';
 import { initiateSecureGuestPayment, finalizeGuestPayment } from '@/app/actions/api';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const QUICK_AMOUNTS = [101, 501, 1001, 2101];
 
@@ -73,6 +75,11 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
     const tn = encodeURIComponent(`${eventData?.eventName || 'Shagun'} Gift`);
     return `upi://pay?pa=${hostProfile.upi}&pn=${pn}&tn=${tn}&am=${cleanAmount.toFixed(2)}&cu=INR`;
   }, [hostProfile, eventData, amount]);
+
+  const qrCodeUrl = useMemo(() => {
+    if (!upiUri) return null;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUri)}`;
+  }, [upiUri]);
 
   const validateForm = () => {
     if (!guestName.trim()) {
@@ -281,55 +288,78 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
 
         {/* STEP 2: PAYMENT LAUNCH SCREEN */}
         {step === 'processing' && (
-          <Card className="w-full shadow-2xl border-none p-12 text-center animate-in zoom-in duration-500 rounded-[2.5rem] bg-white">
-            <div className="mx-auto bg-[#FFF8E7] text-[#D4AF37] p-8 rounded-full w-fit mb-10 border-4 border-white shadow-xl">
-              <Wallet className="h-16 w-16" />
+          <Card className="w-full shadow-2xl border-none text-center animate-in zoom-in duration-500 rounded-[2.5rem] bg-white overflow-hidden">
+            <div className="bg-[#7B1E2B] p-6 text-white">
+              <CardTitle className="text-2xl font-black uppercase tracking-tighter">Launch Payment App</CardTitle>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">Amount: ₹{amount}</p>
             </div>
-            <CardTitle className="text-3xl font-black text-[#7B1E2B] uppercase tracking-tighter mb-4">Launch Payment App</CardTitle>
-            <p className="text-sm font-medium text-muted-foreground mb-12 px-2 leading-relaxed">
-              Click the button below to open your preferred UPI app and complete the payment of <strong>₹{amount}</strong>.
-            </p>
-            <div className="space-y-4">
-              {upiUri ? (
-                <Button 
-                  asChild
-                  className="w-full h-20 text-xl font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-[1.5rem] shadow-2xl shadow-[#1A237E]/20 transition-all active:scale-95 flex items-center justify-center" 
-                >
-                  <a href={upiUri}>PAY NOW (OPEN UPI APP)</a>
-                </Button>
-              ) : (
-                <Button 
-                  disabled
-                  className="w-full h-20 text-xl font-black bg-muted text-muted-foreground rounded-[1.5rem]" 
-                >
-                  UPI ID MISSING IN PROFILE
-                </Button>
-              )}
-
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">After Paying</span></div>
+            
+            <CardContent className="p-8 space-y-8">
+              {/* QR Code Section */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="bg-white p-4 rounded-3xl shadow-xl border-4 border-[#7B1E2B]/5 relative group">
+                  {qrCodeUrl ? (
+                    <img 
+                      src={qrCodeUrl} 
+                      alt="Payment QR Code" 
+                      className="w-48 h-48 md:w-56 md:h-56 object-contain"
+                      data-ai-hint="payment qr"
+                    />
+                  ) : (
+                    <div className="w-48 h-48 flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-[#7B1E2B]" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-10 transition-opacity bg-black rounded-3xl">
+                    <QrCode className="h-20 w-20 text-white" />
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-[10px] font-black text-[#7B1E2B] uppercase tracking-widest">Scan with GPay • PhonePe • Paytm</p>
+                  <p className="text-[9px] text-muted-foreground font-bold italic">Or use the button below to pay on this device</p>
+                </div>
               </div>
 
-              <Button 
-                className="w-full h-16 text-lg font-black bg-[#2E7D32] hover:bg-[#2E7D32]/90 text-white rounded-[1.5rem] shadow-xl shadow-green-900/10 transition-all active:scale-95" 
-                onClick={handleFinalizeRecord}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : 'YES, I HAVE PAID'}
-              </Button>
-              
-              <div className="flex flex-col gap-2 pt-4">
+              <div className="space-y-4">
+                {upiUri ? (
+                  <Button 
+                    asChild
+                    className="w-full h-16 text-lg font-black bg-[#1A237E] hover:bg-[#1A237E]/90 text-white rounded-2xl shadow-xl shadow-[#1A237E]/20 transition-all active:scale-95 flex items-center justify-center" 
+                  >
+                    <a href={upiUri}>PAY NOW (OPEN APP)</a>
+                  </Button>
+                ) : (
+                  <Button 
+                    disabled
+                    className="w-full h-16 text-lg font-black bg-muted text-muted-foreground rounded-2xl" 
+                  >
+                    UPI ID MISSING
+                  </Button>
+                )}
+
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-[9px] uppercase font-black"><span className="bg-white px-2 text-muted-foreground">After Paying</span></div>
+                </div>
+
+                <Button 
+                  className="w-full h-16 text-lg font-black bg-[#2E7D32] hover:bg-[#2E7D32]/90 text-white rounded-2xl shadow-xl shadow-green-900/10 transition-all active:scale-95" 
+                  onClick={handleFinalizeRecord}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : 'YES, I HAVE PAID'}
+                </Button>
+                
                 <Button 
                     variant="ghost" 
-                    className="w-full h-12 font-bold text-muted-foreground uppercase tracking-widest text-[10px]" 
+                    className="w-full h-10 font-black text-muted-foreground uppercase tracking-widest text-[9px]" 
                     onClick={() => setStep('details')}
                 >
-                    <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
+                    <ArrowRight className="h-3 w-3 mr-2 rotate-180" />
                     BACK TO EDIT DETAILS
                 </Button>
               </div>
-            </div>
+            </CardContent>
           </Card>
         )}
 
