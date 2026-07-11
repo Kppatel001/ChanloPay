@@ -14,47 +14,32 @@ import {
   ShieldCheck,
   Settings,
   BarChart3,
+  Shield,
 } from 'lucide-react';
+import { useUser } from '@/firebase';
+import { isAdmin } from '@/lib/admin';
 
 const navItems = [
-  {
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    label: 'Dashboard',
-  },
-  {
-    href: '/analytics',
-    icon: BarChart3,
-    label: 'Analytics',
-  },
-  {
-    href: '/events',
-    icon: CalendarPlus,
-    label: 'Events',
-  },
-  {
-    href: '/transactions',
-    icon: ReceiptText,
-    label: 'Transactions',
-  },
-  {
-    href: '/fraud-detection',
-    icon: ShieldCheck,
-    label: 'Fraud Detection',
-  },
-  {
-    href: '/settings',
-    icon: Settings,
-    label: 'Settings',
-  },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { href: '/events', icon: CalendarPlus, label: 'Events' },
+  { href: '/transactions', icon: ReceiptText, label: 'Transactions' },
+  { href: '/fraud-detection', icon: ShieldCheck, label: 'Fraud Detection' },
+  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user } = useUser();
+
+  // Admin link is only shown to platform administrators.
+  const items = isAdmin(user?.email)
+    ? [...navItems, { href: '/admin', icon: Shield, label: 'Admin' }]
+    : navItems;
 
   return (
     <SidebarMenu>
-      {navItems.map((item) => (
+      {items.map((item) => (
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <SidebarMenuButton

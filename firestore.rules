@@ -11,6 +11,12 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == hostId;
     }
 
+    // Platform administrators (by verified email in the auth token).
+    // Keep this list in sync with ADMIN_EMAILS in src/lib/admin.ts.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email in ['kartavyap43@gmail.com'];
+    }
+
     function incoming() {
       return request.resource.data;
     }
@@ -21,13 +27,11 @@ service cloud.firestore {
     function isValidTransaction() {
       let d = incoming();
       return
-        // Required fields with correct types
         d.name is string && d.name.size() > 0 && d.name.size() <= 100 &&
         d.amount is number && d.amount > 0 && d.amount <= 1000000 &&
         d.transactionDate is string && d.transactionDate.size() <= 40 &&
         d.status is string && d.status in ['Success', 'Pending', 'Failed'] &&
         d.type is string && d.type in ['Gift', 'Donation', 'Service'] &&
-        // Optional fields, if present, must be bounded strings
         (!('village' in d) || (d.village is string && d.village.size() <= 100)) &&
         (!('mobile' in d) || (d.mobile is string && d.mobile.size() <= 20)) &&
         (!('relationship' in d) || (d.relationship is string && d.relationship.size() <= 60)) &&
@@ -35,7 +39,6 @@ service cloud.firestore {
         (!('email' in d) || (d.email is string && d.email.size() <= 200)) &&
         (!('paymentMethod' in d) || (d.paymentMethod is string && d.paymentMethod.size() <= 30)) &&
         (!('receiptQrCode' in d) || (d.receiptQrCode is string && d.receiptQrCode.size() <= 100)) &&
-        // Guard against unexpectedly large documents / field stuffing
         d.keys().size() <= 15;
     }
 
@@ -59,29 +62,33 @@ service cloud.firestore {
 
     // ---------- Host profiles and nested data ----------
     match /hosts/{hostId} {
-      // Public read is required so guests can fetch the host's UPI/name for payment.
-      allow read: if true;
-      // Only the owner may create/modify their profile, and only with valid data.
+      // A guest can fetch a specific host profile (to render the payment page),
+      // but only an admin may enumerate/list all hosts.
+      allow get: if true;
+      allow list: if isAdmin();
       allow create, update: if isOwner(hostId) && isValidHostWrite(hostId);
       allow delete: if isOwner(hostId);
 
       match /events/{eventId} {
-        // Guests may read event details to render the payment page.
-        allow read: if true;
+        // A guest can fetch a specific event; owner and admin can list.
+        allow get: if true;
+        allow list: if isOwner(hostId) || isAdmin();
         allow create, update: if isOwner(hostId) && isValidEventWrite(hostId);
         allow delete: if isOwner(hostId);
 
         match /transactions/{transactionId} {
-          // Guests may CREATE their own contribution record, but only if it
-          // passes validation. They may never read, edit, or delete records.
+          // Guests may CREATE their own valid contribution record.
           allow create: if isValidTransaction();
-          allow read, update, delete: if isOwner(hostId);
+          // Owner and admin may read; only the owner may edit/delete.
+          allow get, list: if isOwner(hostId) || isAdmin();
+          allow update, delete: if isOwner(hostId);
         }
       }
 
-      // Any other nested data is owner-only.
+      // Any other nested data: readable by owner or admin, writable by owner.
       match /{document=**} {
-        allow read, write: if isOwner(hostId);
+        allow read: if isOwner(hostId) || isAdmin();
+        allow write: if isOwner(hostId);
       }
     }
 
