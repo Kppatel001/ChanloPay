@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ChanloPay 2.0 — premium Indian-wedding palette
+       Maroon #7B1E2B · Gold #D4AF37 · Ivory #FAF7F2 · Emerald #2E7D32 · Navy #1A237E · Crimson #C62828 */
+    --background: 40 43% 96%;            /* Warm Ivory */
+    --foreground: 345 25% 16%;           /* Deep warm maroon-black */
+    --card: 40 50% 99%;
+    --card-foreground: 345 25% 16%;
+    --popover: 40 50% 99%;
+    --popover-foreground: 345 25% 16%;
+    --primary: 351 61% 30%;              /* Royal Maroon */
+    --primary-foreground: 40 50% 97%;
+    --secondary: 46 65% 52%;             /* Royal Gold */
+    --secondary-foreground: 351 45% 18%;
+    --muted: 40 25% 91%;
+    --muted-foreground: 345 12% 40%;
+    --accent: 46 60% 90%;                /* Soft gold wash (hover states) */
+    --accent-foreground: 351 45% 22%;
+    --destructive: 0 66% 47%;            /* Crimson Red */
+    --destructive-foreground: 40 50% 97%;
+    --border: 40 25% 85%;
+    --input: 40 25% 88%;
+    --ring: 351 61% 30%;
+    --radius: 1.25rem;                   /* 20px rounded corners */
+
+    /* Extra brand tokens (see tailwind.config.ts colors) */
+    --gold: 46 65% 52%;
+    --gold-foreground: 351 45% 18%;
+    --navy: 235 66% 30%;                 /* Navy Blue (payment CTAs) */
+    --navy-foreground: 40 50% 97%;
+    --success: 123 46% 34%;              /* Emerald Green */
+    --success-foreground: 40 50% 97%;
+
+    --chart-1: 351 61% 34%;              /* maroon */
+    --chart-2: 46 65% 52%;               /* gold */
+    --chart-3: 123 46% 38%;              /* emerald */
+    --chart-4: 235 60% 45%;              /* navy */
+    --chart-5: 0 66% 55%;                /* crimson */
+
+    --sidebar-background: 351 45% 14%;   /* Deep maroon */
+    --sidebar-foreground: 40 30% 85%;
+    --sidebar-primary: 46 65% 55%;       /* Gold */
+    --sidebar-primary-foreground: 351 45% 12%;
+    --sidebar-accent: 351 40% 20%;
+    --sidebar-accent-foreground: 46 60% 85%;
+    --sidebar-border: 351 30% 24%;
+    --sidebar-ring: 46 65% 55%;
+  }
+
+  .dark {
+    --background: 345 30% 8%;
+    --foreground: 40 30% 90%;
+    --card: 345 28% 12%;
+    --card-foreground: 40 30% 90%;
+    --popover: 345 30% 8%;
+    

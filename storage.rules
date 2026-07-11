@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// Storage firewall for ChanloPay. Media (event cover images, couple photos,
+// guestbook uploads) lives under hosts/{hostId}/... and is writable only by the
+// owning host. Public read is allowed so guests can view event imagery.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isOwner(hostId) {
+      return request.auth != null && request.auth.uid == hostId;
+    }
+
+    // Only images, capped at 5 MB.
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /hosts/{hostId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(hostId) && isValidImage();
+    }
+
+    // Default deny.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
