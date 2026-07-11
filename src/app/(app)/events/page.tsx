@@ -581,4 +581,25 @@ export default function EventsPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Event?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This action will permanently delete "{event.eventName}" and its {count} 
+                              This action will permanently delete "{event.eventName}" and its {count} transaction records.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteEvent(event.id!)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Delete Permanently
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

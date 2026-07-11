@@ -179,4 +179,35 @@ export default function SignupPage() {
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start gap-2 space-y-0 rounded-lg border border-secondary/30 bg-muted/30 p-3">
                     <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-0.5" />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-xs font-normal text-muted-foreground">
+                        I agree to the{' '}
+                        <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">Terms of Service</Link>
+                        {' '}and{' '}
+                        <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">Privacy Policy</Link>.
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating Account...' : 'Sign Up'}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="flex justify-center border-t py-4">
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary font-semibold hover:underline">
+              Sign In
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}

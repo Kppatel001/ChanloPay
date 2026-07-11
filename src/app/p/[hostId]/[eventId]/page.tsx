@@ -341,4 +341,120 @@ export default function GuestPaymentPage({ params }: { params: Promise<{ hostId:
                     If your app shows <strong>"Declined for Security Reasons"</strong>, copy the ID below and pay via <strong>New Payment &gt; UPI ID</strong>.
                   </AlertDescription>
                 </Alert>
-                <div className="flex items-center gap
+                <div className="flex items-center gap-3 bg-card p-4 rounded-xl border-2 border-secondary/30 shadow-sm">
+                  <div className="truncate flex-1">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Host UPI ID</p>
+                    <p className="text-base font-mono font-bold text-primary truncate">{hostProfile.upi}</p>
+                  </div>
+                  <Button size="sm" className="h-11 gap-2 font-bold px-4 bg-primary shrink-0" onClick={handleCopyUpi}>
+                    {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {isCopied ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="w-full flex flex-col items-center border-t border-secondary/20 pt-5">
+                <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3 font-bold">Or scan to pay</p>
+                <div className="bg-white p-3 rounded-2xl border-2 border-secondary/20 shadow-inner">
+                  <Image src={qrCodeUrl} alt="Payment QR Code" width={170} height={170} className="rounded-lg" />
+                </div>
+              </div>
+
+              <div className="w-full space-y-3 border-t border-secondary/20 pt-5">
+                <StepLabel n={2} text="After paying, save your record" />
+                <Button
+                  className="w-full h-16 text-lg font-bold bg-success text-success-foreground hover:bg-success/90 shadow-soft"
+                  onClick={handleConfirmPayment}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CheckCircle2 className="mr-2 h-6 w-6" />}
+                  Confirm &amp; Save Entry
+                </Button>
+                <Button variant="ghost" className="w-full text-xs text-muted-foreground" onClick={() => setStep('details')}>
+                  <ArrowLeft className="mr-2 h-3 w-3" /> Edit details
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* STEP: SUCCESS */}
+        {step === 'done' && (
+          <Card className="w-full shadow-soft border-success/30 overflow-hidden animate-in fade-in zoom-in duration-500">
+            <div className="bg-gradient-to-br from-success to-[hsl(123_46%_26%)] px-6 pt-10 pb-8 text-center text-success-foreground">
+              <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-white/95 text-success shadow-lg animate-pop-in">
+                <CheckCircle2 className="h-11 w-11" />
+              </div>
+              <h2 className="font-headline text-2xl font-bold">Thank You, {guestName.split(' ')[0]}!</h2>
+              <p className="mt-1 text-sm text-success-foreground/85">Your blessing has been recorded 🎉</p>
+            </div>
+            <CardContent className="p-6 space-y-4">
+              <div className="rounded-xl border border-secondary/30 bg-secondary/5 divide-y divide-secondary/20">
+                <ReceiptRow label="Amount" value={`₹${amount}`} strong />
+                <ReceiptRow label="Event" value={eventData.eventName} />
+                <ReceiptRow label="From" value={guestName} />
+                {villageName && <ReceiptRow label="Village / City" value={villageName} />}
+                <ReceiptRow label="Reference" value={receiptRef} mono />
+                <ReceiptRow label="Date & Time" value={new Date().toLocaleString()} />
+              </div>
+              {blessing && (
+                <div className="rounded-xl bg-primary/5 border border-primary/10 p-3 text-center">
+                  <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Your Blessing</p>
+                  <p className="text-sm italic text-foreground/80">“{blessing}”</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="font-bold border-primary/30 text-primary" onClick={shareReceipt}>
+                  <Share2 className="mr-2 h-4 w-4" /> Share
+                </Button>
+                <Button className="font-bold bg-success text-success-foreground hover:bg-success/90" onClick={whatsappReceipt}>
+                  <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+                </Button>
+              </div>
+              <Button variant="ghost" className="w-full font-bold" onClick={resetForNext}>
+                Done · Make another payment
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  icon, label, hint, required, children,
+}: {
+  icon: React.ReactNode; label: string; hint?: string; required?: boolean; children: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <Label className="font-body text-xs uppercase tracking-wider font-bold text-muted-foreground flex items-center gap-1">
+        {label}{required && <span className="text-destructive">*</span>}
+        {hint && <span className="normal-case tracking-normal font-normal text-[10px] opacity-70">({hint})</span>}
+      </Label>
+      <div className="relative">
+        <span className="absolute left-3 top-3.5 z-10">{icon}</span>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StepLabel({ n, text }: { n: number; text: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{n}</div>
+      <p className="text-sm font-bold uppercase tracking-tight text-primary">{text}</p>
+    </div>
+  );
+}
+
+function ReceiptRow({ label, value, strong, mono }: { label: string; value?: string; strong?: boolean; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={`text-sm ${strong ? 'font-bold text-primary text-base' : 'font-medium text-foreground'} ${mono ? 'font-mono' : ''}`}>{value}</span>
+    </div>
+  );
+}

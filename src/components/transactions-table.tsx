@@ -334,4 +334,19 @@ export function TransactionsTable() {
               <Button asChild variant="outline" size="sm">
                 <Link href={`/transactions?page=${page - 1}`}>Previous</Link>
               </Button>
-       
+            )}
+            {page >= totalPages ? (
+              <Button variant="outline" size="sm" disabled>
+                Next
+              </Button>
+            ) : (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/transactions?page=${page + 1}`}>Next</Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

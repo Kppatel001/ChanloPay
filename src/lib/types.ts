@@ -26,4 +26,42 @@ export type Transaction = {
 };
 
 /**
- * Shape o
+ * Shape of a transaction document as stored in Firestore. Kept in sync with
+ * the objects written by the guest payment page and the manual-entry form.
+ * `transactionDate` is an ISO string; it is mapped to `Transaction.date` on read.
+ */
+export type TransactionDoc = {
+  name: string;
+  village?: string;
+  mobile?: string;
+  relationship?: string;
+  blessing?: string;
+  email: string;
+  amount: number;
+  transactionDate: string;
+  status: TransactionStatus;
+  type: TransactionType | string;
+  paymentMethod?: string;
+  receiptQrCode?: string;
+  eventId?: string;
+};
+
+export type Event = {
+  id?: string;
+  hostId: string;
+  eventName: string;
+  eventDate: string; // ISO string
+  location: string;
+  qrCode: string;
+  createdAt?: FieldValue;
+};
+
+export type Host = {
+  id: string;
+  email: string;
+  name?: string;
+  mobile?: string;
+  upi?: string;
+  registrationDate?: string;
+  kycVerified?: boolean;
+};

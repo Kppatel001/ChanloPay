@@ -63,4 +63,10 @@ export function SidebarNav() {
             >
               <item.icon />
               <span>{item.label}</span>
-            </SidebarMe
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+}

@@ -150,4 +150,42 @@ export default function DashboardPage() {
                 <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No breakdown data yet.</div>
               )}
             </CardContent>
-       
+          </Card>
+        </div>
+
+        {/* Event progress + recent */}
+        <div className="grid gap-4 lg:grid-cols-7">
+          <Card className="lg:col-span-4 shadow-soft border-secondary/20">
+            <CardHeader>
+              <CardTitle>Event Progress</CardTitle>
+              <CardDescription>Collection by event.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? (
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              ) : perEvent.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No events yet. Create one to get started.</p>
+              ) : (
+                perEvent.slice(0, 5).map((e) => (
+                  <div key={e.id}>
+                    <div className="flex items-center justify-between text-sm mb-1.5">
+                      <span className="font-medium truncate pr-2">{e.name}</span>
+                      <span className="font-bold text-primary shrink-0">
+                        ₹{e.total.toLocaleString('en-IN')} · {e.count} guests
+                      </span>
+                    </div>
+                    <Progress value={(e.total / topTotal) * 100} className="h-2" />
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="lg:col-span-3">
+            <RecentTransactions transactions={transactions} isLoading={isLoading} />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

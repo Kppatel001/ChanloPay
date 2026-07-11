@@ -114,4 +114,10 @@ export function FraudDetectionForm() {
             <Alert variant="destructive" className="mt-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertD
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

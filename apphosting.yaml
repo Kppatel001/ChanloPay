@@ -5,3 +5,16 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+# Environment variables and secrets available to the deployed backend.
+# The Gemini API key is required by Genkit (src/ai/genkit.ts) for the
+# fraud-detection and event-idea AI features.
+#
+# 1) Store the key as a secret:
+#      firebase apphosting:secrets:set GEMINI_API_KEY
+# 2) The reference below exposes it to the running server.
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME

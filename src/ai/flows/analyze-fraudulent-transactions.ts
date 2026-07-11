@@ -63,4 +63,15 @@ const analyzeTransactionsFlow = ai.defineFlow(
       return output!;
     } catch (error) {
       console.error('Error analyzing transactions:', error);
-     
+      // Do NOT report a failed analysis as "safe" (isFraudulent: false), which
+      // would silently mask a broken AI service. Flag it so the UI can show a
+      // real error state instead of a false all-clear.
+      return {
+        isFraudulent: false,
+        error: true,
+        reason:
+          'Fraud analysis could not be completed. The AI service may be unavailable or the API key may be missing. Please try again.',
+      };
+    }
+  }
+);

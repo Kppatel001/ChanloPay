@@ -32,4 +32,10 @@ export function FirebaseErrorListener() {
 
     errorEmitter.on('permission-error', handleError);
     return () => {
-      errorEmitter.off('permission-er
+      errorEmitter.off('permission-error', handleError);
+    };
+  }, [toast]);
+
+  // This component renders nothing.
+  return null;
+}

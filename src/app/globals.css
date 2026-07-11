@@ -57,4 +57,71 @@
     --card: 345 28% 12%;
     --card-foreground: 40 30% 90%;
     --popover: 345 30% 8%;
-    
+    --popover-foreground: 40 30% 90%;
+    --primary: 351 61% 45%;
+    --primary-foreground: 40 50% 97%;
+    --secondary: 46 65% 52%;
+    --secondary-foreground: 351 45% 14%;
+    --muted: 345 20% 18%;
+    --muted-foreground: 40 15% 65%;
+    --accent: 351 30% 22%;
+    --accent-foreground: 46 60% 80%;
+    --destructive: 0 66% 52%;
+    --destructive-foreground: 40 50% 97%;
+    --border: 345 20% 24%;
+    --input: 345 20% 24%;
+    --ring: 46 65% 55%;
+
+    --gold: 46 65% 55%;
+    --gold-foreground: 351 45% 14%;
+    --navy: 235 66% 55%;
+    --navy-foreground: 40 50% 97%;
+    --success: 123 46% 45%;
+    --success-foreground: 40 50% 97%;
+
+    --chart-1: 351 61% 55%;
+    --chart-2: 46 65% 55%;
+    --chart-3: 123 46% 48%;
+    --chart-4: 235 60% 60%;
+    --chart-5: 0 66% 58%;
+
+    --sidebar-background: 345 35% 9%;
+    --sidebar-foreground: 40 30% 85%;
+    --sidebar-primary: 46 65% 55%;
+    --sidebar-primary-foreground: 351 45% 12%;
+    --sidebar-accent: 351 30% 16%;
+    --sidebar-accent-foreground: 46 60% 85%;
+    --sidebar-border: 345 25% 18%;
+    --sidebar-ring: 46 65% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Glassmorphism card surface */
+  .glass {
+    background: hsl(var(--card) / 0.65);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+  .shadow-soft {
+    box-shadow: 0 10px 30px -12px hsl(351 61% 30% / 0.18),
+      0 4px 10px -6px hsl(345 25% 16% / 0.08);
+  }
+  /* Subtle gold gradient text for headings */
+  .text-gradient-gold {
+    background: linear-gradient(90deg, hsl(46 65% 45%), hsl(46 80% 60%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}

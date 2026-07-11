@@ -28,4 +28,66 @@ service cloud.firestore {
         d.status is string && d.status in ['Success', 'Pending', 'Failed'] &&
         d.type is string && d.type in ['Gift', 'Donation', 'Service'] &&
         // Optional fields, if present, must be bounded strings
- 
+        (!('village' in d) || (d.village is string && d.village.size() <= 100)) &&
+        (!('mobile' in d) || (d.mobile is string && d.mobile.size() <= 20)) &&
+        (!('relationship' in d) || (d.relationship is string && d.relationship.size() <= 60)) &&
+        (!('blessing' in d) || (d.blessing is string && d.blessing.size() <= 500)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 200)) &&
+        (!('paymentMethod' in d) || (d.paymentMethod is string && d.paymentMethod.size() <= 30)) &&
+        (!('receiptQrCode' in d) || (d.receiptQrCode is string && d.receiptQrCode.size() <= 100)) &&
+        // Guard against unexpectedly large documents / field stuffing
+        d.keys().size() <= 15;
+    }
+
+    function isValidHostWrite(hostId) {
+      let d = incoming();
+      return
+        d.id == hostId &&
+        (!('name' in d) || (d.name is string && d.name.size() <= 100)) &&
+        (!('mobile' in d) || (d.mobile is string && d.mobile.size() <= 20)) &&
+        (!('upi' in d) || (d.upi is string && d.upi.size() <= 120)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 200));
+    }
+
+    function isValidEventWrite(hostId) {
+      let d = incoming();
+      return
+        d.hostId == hostId &&
+        d.eventName is string && d.eventName.size() > 0 && d.eventName.size() <= 120 &&
+        (!('location' in d) || (d.location is string && d.location.size() <= 200));
+    }
+
+    // ---------- Host profiles and nested data ----------
+    match /hosts/{hostId} {
+      // Public read is required so guests can fetch the host's UPI/name for payment.
+      allow read: if true;
+      // Only the owner may create/modify their profile, and only with valid data.
+      allow create, update: if isOwner(hostId) && isValidHostWrite(hostId);
+      allow delete: if isOwner(hostId);
+
+      match /events/{eventId} {
+        // Guests may read event details to render the payment page.
+        allow read: if true;
+        allow create, update: if isOwner(hostId) && isValidEventWrite(hostId);
+        allow delete: if isOwner(hostId);
+
+        match /transactions/{transactionId} {
+          // Guests may CREATE their own contribution record, but only if it
+          // passes validation. They may never read, edit, or delete records.
+          allow create: if isValidTransaction();
+          allow read, update, delete: if isOwner(hostId);
+        }
+      }
+
+      // Any other nested data is owner-only.
+      match /{document=**} {
+        allow read, write: if isOwner(hostId);
+      }
+    }
+
+    // ---------- Default deny for everything else ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

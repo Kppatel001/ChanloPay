@@ -194,4 +194,53 @@ export default function SettingsPage() {
                   Save Changes
                 </Button>
               </CardFooter>
-            <
+            </form>
+          </Form>
+        </Card>
+
+        {/* Security Center */}
+        <Card className="w-full max-w-2xl shadow-soft border-secondary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              Security Center
+            </CardTitle>
+            <CardDescription>
+              How your account and payments are protected, and our policies.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-start gap-3 rounded-xl border border-secondary/30 bg-muted/30 p-4">
+              <Lock className="mt-0.5 h-5 w-5 text-success" />
+              <div>
+                <p className="text-sm font-semibold">Your data is protected</p>
+                <p className="text-xs text-muted-foreground">
+                  Only you can view or edit your events and records. Payments go directly to your UPI ID —
+                  ChanloPay never stores card or bank details.
+                </p>
+              </div>
+            </div>
+            {[
+              { href: '/security', icon: ShieldCheck, label: 'Security overview' },
+              { href: '/privacy', icon: FileText, label: 'Privacy Policy' },
+              { href: '/terms', icon: FileText, label: 'Terms of Service' },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                className="flex items-center justify-between rounded-xl border border-transparent p-3 transition-colors hover:border-secondary/30 hover:bg-primary/5"
+              >
+                <span className="flex items-center gap-3 text-sm font-medium">
+                  <item.icon className="h-4 w-4 text-primary" />
+                  {item.label}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}
