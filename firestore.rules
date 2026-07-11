@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helper functions ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(hostId) {
+      return isSignedIn() && request.auth.uid == hostId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // A guest-created transaction must be well-formed. This is the core
+    // "firewall" around payments: it rejects malformed, oversized, or
+    // tampered records even though creation is open to unauthenticated guests.
+    function isValidTransaction() {
+      let d = incoming();
+      return
+        // Required fields with correct types
+        d.name is string && d.name.size() > 0 && d.name.size() <= 100 &&
+        d.amount is number && d.amount > 0 && d.amount <= 1000000 &&
+        d.transactionDate is string && d.transactionDate.size() <= 40 &&
+        d.status is string && d.status in ['Success', 'Pending', 'Failed'] &&
+        d.type is string && d.type in ['Gift', 'Donation', 'Service'] &&
+        // Optional fields, if present, must be bounded strings
+ 
